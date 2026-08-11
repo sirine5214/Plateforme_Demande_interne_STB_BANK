@@ -1,0 +1,59 @@
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <app-card cardTitle="Mon profil">
+      @if (loading()) {
+      <p class="text-muted">Chargement...</p>
+      } @else {
+      @if (success()) {
+      <div class="alert alert-success" role="alert">{{ success() }}</div>
+      }
+      @if (error()) {
+      <div class="alert alert-danger" role="alert">{{ error() }}</div>
+      }
+
+      <div class="d-flex align-items-center mb-4">
+        <img [src]="avatarUrl" alt="Photo de profil" class="img-radius" width="80" height="80" style="object-fit: cover" />
+        <div class="ms-3">
+          <label for="photo" class="btn btn-sm btn-outline-primary mb-0" [class.disabled]="uploadingPhoto()">
+            @if (uploadingPhoto()) { Envoi... } @else { Changer la photo }
+          </label>
+          <input type="file" id="photo" accept="image/*" class="d-none" [disabled]="uploadingPhoto()" (change)="onPhotoSelected($event)" />
+        </div>
+      </div>
+
+      <form (ngSubmit)="onSubmit()">
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-control" [value]="email" disabled />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Rôle</label>
+          <input type="text" class="form-control" [value]="roleLabel" disabled />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="nom">Nom complet</label>
+          <input type="text" id="nom" class="form-control" name="nom" [(ngModel)]="nom" required />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="nouveauMotDePasse">Nouveau mot de passe (optionnel)</label>
+          <input
+            type="password"
+            id="nouveauMotDePasse"
+            class="form-control"
+            name="nouveauMotDePasse"
+            [(ngModel)]="nouveauMotDePasse"
+            placeholder="Laisser vide pour ne pas changer"
+          />
+        </div>
+
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">
+          @if (saving()) { Enregistrement... } @else { Enregistrer }
+        </button>
+      </form>
+      }
+    </app-card>
+  </div>
+</div>

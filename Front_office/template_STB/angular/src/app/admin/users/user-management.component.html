@@ -1,0 +1,203 @@
+<!-- Bandeau -->
+<div class="stb-banner">
+  <h4 class="stb-banner__title">Gestion des utilisateurs</h4>
+  <button type="button" class="btn stb-btn-light" (click)="openCreate()">
+    <i class="feather icon-user-plus me-1"></i>
+    Ajouter
+  </button>
+</div>
+
+@if (success()) {
+<div class="alert alert-success alert-dismissible" role="alert">
+  {{ success() }}
+  <button type="button" class="btn-close" (click)="success.set('')"></button>
+</div>
+}
+@if (error()) {
+<div class="alert alert-danger alert-dismissible" role="alert">
+  {{ error() }}
+  <button type="button" class="btn-close" (click)="error.set('')"></button>
+</div>
+}
+
+<!-- Recherche -->
+<div class="card stb-search-card">
+  <div class="card-body d-flex align-items-center gap-3 flex-wrap">
+    <div class="stb-search flex-grow-1">
+      <i class="feather icon-search"></i>
+      <input
+        type="text"
+        class="form-control"
+        placeholder="Rechercher par nom d'utilisateur ou email..."
+        [value]="search()"
+        (input)="onSearchChange($any($event.target).value)"
+      />
+    </div>
+    <span class="stb-count">{{ totalElements() }} utilisateur(s) trouvé(s)</span>
+  </div>
+</div>
+
+<!-- Tableau -->
+<div class="card stb-table-card">
+  <div class="card-body p-0">
+    @if (loading()) {
+    <p class="text-muted p-4 mb-0">Chargement...</p>
+    } @else if (users().length === 0) {
+    <p class="text-muted p-4 mb-0">Aucun utilisateur trouvé.</p>
+    } @else {
+    <div class="table-responsive">
+      <table class="table stb-table mb-0">
+        <thead>
+          <tr>
+            <th>Nom d'utilisateur</th>
+            <th>Email</th>
+            <th>Rôle</th>
+            <th>État</th>
+            <th>Date de création</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (user of users(); track user.id) {
+          <tr>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="stb-avatar"><i class="feather icon-user"></i></span>
+                <strong>{{ user.nom }}</strong>
+              </div>
+            </td>
+            <td class="text-muted">{{ user.email }}</td>
+            <td>
+              <span class="stb-badge" [class.stb-badge--admin]="user.role === 'ADMINISTRATEUR'">
+                {{ roleLabel(user.role) }}
+              </span>
+            </td>
+            <td>
+              <span class="stb-status" [class.stb-status--off]="!user.actif">
+                {{ user.actif ? 'Actif' : 'Inactif' }}
+              </span>
+            </td>
+            <td class="text-muted">{{ user.dateCreation ? (user.dateCreation | date: 'dd/MM/yyyy HH:mm') : '—' }}</td>
+            <td>
+              <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="stb-action" title="Modifier" (click)="openEdit(user)">
+                  <i class="feather icon-edit-2"></i>
+                </button>
+                <button
+                  type="button"
+                  class="stb-action"
+                  [title]="user.actif ? 'Désactiver' : 'Activer'"
+                  [disabled]="busyId() === user.id"
+                  (click)="toggleStatus(user)"
+                >
+                  <i class="feather" [class.icon-user-x]="user.actif" [class.icon-user-check]="!user.actif"></i>
+                </button>
+                <button
+                  type="button"
+                  class="stb-action stb-action--danger"
+                  title="Supprimer"
+                  [disabled]="busyId() === user.id"
+                  (click)="deleteUser(user)"
+                >
+                  <i class="feather icon-trash-2"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination : toujours affichée pour indiquer la portée des résultats -->
+    <div class="stb-pagination">
+      <span class="stb-pagination__info">
+        Affichage de {{ premierIndex() }} à {{ dernierIndex() }} sur {{ totalElements() }} utilisateur(s)
+      </span>
+
+      <div class="stb-pagination__boutons">
+        <button type="button" class="stb-page" [disabled]="page() === 1" (click)="goToPage(page() - 1)" title="Page précédente">
+          <i class="feather icon-chevron-left"></i>
+        </button>
+        @for (p of pages(); track p) {
+        <button type="button" class="stb-page" [class.stb-page--active]="p === page()" (click)="goToPage(p)">{{ p }}</button>
+        }
+        <button type="button" class="stb-page" [disabled]="page() === totalPages()" (click)="goToPage(page() + 1)" title="Page suivante">
+          <i class="feather icon-chevron-right"></i>
+        </button>
+      </div>
+
+      <select class="form-control stb-pagination__taille" [value]="taillePage()" (change)="onTaillePageChange($any($event.target).value)">
+        @for (taille of taillesDisponibles; track taille) {
+        <option [value]="taille">{{ taille }} par page</option>
+        }
+      </select>
+    </div>
+    }
+  </div>
+</div>
+
+<!-- Modal ajout / modification -->
+@if (modalOpen()) {
+<div class="stb-modal-backdrop" (click)="closeModal()"></div>
+<div class="stb-modal">
+  <div class="stb-modal__header">
+    <h5 class="mb-0">{{ editingUser() ? "Modifier l'utilisateur" : 'Ajouter un utilisateur' }}</h5>
+    <button type="button" class="btn-close btn-close-white" (click)="closeModal()"></button>
+  </div>
+
+  <form class="stb-modal__body" (ngSubmit)="submitForm()">
+    @if (formError()) {
+    <div class="alert alert-danger">{{ formError() }}</div>
+    }
+
+    <div class="mb-3">
+      <label class="form-label" for="form-nom">Nom complet *</label>
+      <input type="text" id="form-nom" class="form-control" name="nom" [(ngModel)]="form.nom" required />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label" for="form-email">Email *</label>
+      <input type="email" id="form-email" class="form-control" name="email" [(ngModel)]="form.email" required />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label" for="form-role">Rôle *</label>
+      <select id="form-role" class="form-control" name="role" [(ngModel)]="form.role" required>
+        <option value="" disabled>Choisir un rôle</option>
+        @for (option of roleOptions; track option.value) {
+        <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label" for="form-password">
+        {{ editingUser() ? 'Nouveau mot de passe (optionnel)' : 'Mot de passe *' }}
+      </label>
+      <input
+        type="password"
+        id="form-password"
+        class="form-control"
+        name="motDePasse"
+        [(ngModel)]="form.motDePasse"
+        [placeholder]="editingUser() ? 'Laisser vide pour ne pas changer' : 'Min. 8 caractères'"
+      />
+    </div>
+
+    @if (editingUser()) {
+    <div class="mb-3 form-check">
+      <input type="checkbox" class="form-check-input" id="form-actif" name="actif" [(ngModel)]="form.actif" />
+      <label class="form-check-label" for="form-actif">Compte actif</label>
+    </div>
+    }
+
+    <div class="d-flex justify-content-end gap-2 pt-2">
+      <button type="button" class="btn btn-light" (click)="closeModal()">Annuler</button>
+      <button type="submit" class="btn btn-primary" [disabled]="saving()">
+        @if (saving()) { Enregistrement... } @else { {{ editingUser() ? 'Enregistrer' : 'Créer' }} }
+      </button>
+    </div>
+  </form>
+</div>
+}

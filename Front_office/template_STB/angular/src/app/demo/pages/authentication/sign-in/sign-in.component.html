@@ -1,0 +1,95 @@
+<div class="auth-wrapper">
+  <div class="stb-auth">
+    <!-- Panneau de marque -->
+    <aside class="stb-auth__brand">
+      <img src="assets/images/logo.png" alt="STB Bank" />
+      <h3>Plateforme de gestion des demandes internes</h3>
+      <p>Direction Développement Digital</p>
+      <ul class="stb-auth__points">
+        <li><i class="feather icon-check-circle"></i> Centralisation de vos demandes</li>
+        <li><i class="feather icon-activity"></i> Suivi en temps réel de leur avancement</li>
+        <li><i class="feather icon-shield"></i> Accès sécurisé selon votre rôle</li>
+      </ul>
+    </aside>
+
+    <!-- Formulaire -->
+    <div class="stb-auth__form">
+      <img src="assets/images/logo-dark.png" alt="STB Bank" class="stb-auth__logo-mobile" />
+
+      <h4>Connexion</h4>
+      <p class="stb-auth__soustitre">Accédez à votre espace de travail</p>
+
+      <form (ngSubmit)="onSubmit($event)">
+        @if (error()) {
+        <div class="alert alert-danger" role="alert">{{ error() }}</div>
+        }
+
+        <div class="stb-champ">
+          <i class="feather icon-mail"></i>
+          <input
+            type="email"
+            class="form-control"
+            id="floatingInput"
+            placeholder="Adresse email"
+            [class.is-invalid]="submitted() && loginForm.email().invalid()"
+            [formField]="loginForm.email"
+          />
+          @if (submitted() && loginForm.email().invalid()) {
+          <div class="invalid-feedback">
+            @for (error of loginForm.email().errors(); track error.kind) {
+            <div>{{ error.message }}</div>
+            }
+          </div>
+          }
+        </div>
+
+        <div class="stb-champ">
+          <i class="feather icon-lock"></i>
+          @if (!showPassword()) {
+          <input
+            type="password"
+            id="password"
+            class="form-control"
+            placeholder="Mot de passe"
+            [formField]="loginForm.password"
+            [class.is-invalid]="submitted() && loginForm.password().errors().length > 0"
+          />
+          } @else {
+          <input
+            type="text"
+            id="password"
+            class="form-control"
+            placeholder="Mot de passe"
+            [formField]="loginForm.password"
+            [class.is-invalid]="submitted() && loginForm.password().errors().length > 0"
+          />
+          }
+          @if (submitted() && loginForm.password().errors().length > 0) {
+          <div class="invalid-feedback">
+            @for (error of loginForm.password().errors(); track error.kind) {
+            <div>{{ error.message }}</div>
+            }
+          </div>
+          }
+        </div>
+
+        <div class="d-flex align-items-center justify-content-between mb-4">
+          <div class="checkbox checkbox-primary d-inline">
+            <input type="checkbox" name="checkbox-fill-1" id="checkbox-fill-a1" checked="" />
+            <label for="checkbox-fill-a1" class="cr">Se souvenir de moi</label>
+          </div>
+          <a [routerLink]="['/mot-de-passe-oublie']" class="f-w-400">Mot de passe oublié ?</a>
+        </div>
+
+        <button type="submit" class="stb-auth__submit" [disabled]="loading()">
+          @if (loading()) { Connexion en cours... } @else { Se connecter }
+        </button>
+      </form>
+
+      <p class="stb-auth__liens">
+        Vous n'avez pas de compte ?
+        <a [routerLink]="['/register']">Créer un compte</a>
+      </p>
+    </div>
+  </div>
+</div>

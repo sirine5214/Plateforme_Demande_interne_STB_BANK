@@ -1,0 +1,117 @@
+<div class="stb-banner">
+  <div>
+    <h4 class="stb-banner__title">Tableau de bord</h4>
+    <p class="stb-banner__sub mb-0">Supervision des comptes et de l'activité</p>
+  </div>
+  <a [routerLink]="['/admin/users']" class="btn stb-btn-light">
+    <i class="feather icon-users me-1"></i>
+    Gérer les utilisateurs
+  </a>
+</div>
+
+@if (loading()) {
+<p class="text-muted">Chargement...</p>
+} @else {
+
+<!-- Comptes utilisateurs -->
+<h6 class="stb-section-titre">Comptes utilisateurs</h6>
+<div class="row">
+  <div class="col-lg-3 col-md-6 mb-4">
+    <div class="card stb-stat stb-stat--primary">
+      <div class="card-body">
+        <div class="stb-stat__entete">
+          <span class="stb-stat__label">Utilisateurs</span>
+          <i class="feather icon-users"></i>
+        </div>
+        <h2 class="stb-stat__value">{{ totalUsers() }}</h2>
+        <small class="text-white-50">{{ comptesActifs() }} actif(s) · {{ comptesInactifs() }} désactivé(s)</small>
+      </div>
+    </div>
+  </div>
+
+  @for (card of roleCards(); track card.role) {
+  <div class="col-lg-3 col-md-6 mb-4">
+    <div class="card stb-stat">
+      <div class="card-body">
+        <div class="stb-stat__entete">
+          <span class="stb-stat__label">{{ card.label }}</span>
+          <i [class]="card.icone"></i>
+        </div>
+        <h2 class="stb-stat__value">{{ card.count }}</h2>
+      </div>
+    </div>
+  </div>
+  }
+</div>
+
+<!-- Activité des demandes -->
+@if (stats(); as s) {
+<h6 class="stb-section-titre">Activité des demandes</h6>
+
+@if (s.enRetard > 0) {
+<div class="stb-alerte mb-4">
+  <i class="feather icon-alert-triangle"></i>
+  <div class="flex-grow-1">
+    <strong>{{ s.enRetard }} demande(s) en retard</strong>
+    <div class="small">La date limite est dépassée et le traitement n'est pas terminé.</div>
+  </div>
+  <a [routerLink]="['/demandes']" class="btn btn-sm btn-light">Consulter</a>
+</div>
+}
+
+<div class="row">
+  <div class="col-lg-3 col-md-6 mb-4">
+    <div class="card stb-stat">
+      <div class="card-body">
+        <div class="stb-stat__entete">
+          <span class="stb-stat__label">Demandes au total</span>
+          <i class="feather icon-layers"></i>
+        </div>
+        <h2 class="stb-stat__value">{{ s.total }}</h2>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-md-6 mb-4">
+    <div class="card stb-stat">
+      <div class="card-body">
+        <div class="stb-stat__entete">
+          <span class="stb-stat__label">En cours</span>
+          <i class="feather icon-clock text-primary"></i>
+        </div>
+        <h2 class="stb-stat__value">{{ s.ouvertes }}</h2>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-md-6 mb-4">
+    <div class="card stb-stat" [class.stb-stat--alerte]="s.nonAffectees > 0">
+      <div class="card-body">
+        <div class="stb-stat__entete">
+          <span class="stb-stat__label">À affecter</span>
+          <i class="feather icon-user-plus"></i>
+        </div>
+        <h2 class="stb-stat__value">{{ s.nonAffectees }}</h2>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-md-6 mb-4">
+    <div class="card stb-stat">
+      <div class="card-body">
+        <div class="stb-stat__entete">
+          <span class="stb-stat__label">Clôturées</span>
+          <i class="feather icon-check-circle text-success"></i>
+        </div>
+        <h2 class="stb-stat__value">{{ s.cloturees }}</h2>
+      </div>
+    </div>
+  </div>
+</div>
+
+<a [routerLink]="['/statistiques']" class="btn btn-primary">
+  <i class="feather icon-pie-chart me-1"></i>
+  Voir les statistiques détaillées
+</a>
+}
+}

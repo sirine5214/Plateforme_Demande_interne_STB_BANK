@@ -1,0 +1,87 @@
+// Volet de suggestions de la recherche globale
+.stb-recherche {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1030;
+  margin-top: 0.4rem;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(13, 13, 13, 0.16);
+  overflow: hidden;
+
+  &__vide {
+    padding: 1rem 1.15rem;
+    font-size: 13px;
+    color: #8a94a0;
+  }
+
+  &__liste {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+
+  &__item {
+    padding: 0.7rem 1.15rem;
+    border-bottom: 1px solid #eef1f4;
+    cursor: pointer;
+    transition: background 0.12s ease-in-out;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background: rgba(0, 128, 201, 0.06);
+    }
+
+    strong {
+      font-size: 13px;
+      color: #34424f;
+    }
+  }
+
+  &__entete {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    margin-bottom: 0.15rem;
+  }
+
+  &__statut {
+    flex: 0 0 auto;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+    background: rgba(0, 128, 201, 0.14);
+    color: #0477bf;
+  }
+
+  &__tout {
+    display: block;
+    width: 100%;
+    padding: 0.65rem;
+    border: none;
+    border-top: 1px solid #eef1f4;
+    background: #f6f8fa;
+    color: #0477bf;
+    font-size: 13px;
+    font-weight: 600;
+
+    &:hover {
+      background: rgba(0, 128, 201, 0.1);
+    }
+  }
+}
+
+// Le volet se positionne par rapport à la barre de recherche
+:host {
+  position: relative;
+  display: inline-block;
+}

@@ -1,0 +1,42 @@
+// This file is intentionally left empty to allow customers to add custom CSS if needed.
+
+// Badge du type de demande dans les notifications
+.stb-noti-type {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 20px;
+  background: rgba(0, 128, 201, 0.14);
+  color: #0477bf;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+// Ligne de notification cliquable
+.stb-noti {
+  cursor: pointer;
+}
+
+// Pastille d'icône des notifications
+.stb-noti-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  margin-right: 0.75rem;
+  border-radius: 50%;
+  background: rgba(0, 128, 201, 0.14);
+  color: #0477bf;
+
+  &--lue {
+    background: rgba(13, 13, 13, 0.06);
+    color: #8a94a0;
+  }
+
+  // Les messages se distinguent des événements de cycle de vie
+  &--message {
+    background: rgba(5, 242, 219, 0.18);
+    color: #067a6d;
+  }
+}

@@ -1,0 +1,218 @@
+<div class="stb-banner">
+  <div>
+    <h4 class="stb-banner__title">{{ titre() }}</h4>
+    <p class="stb-banner__sub mb-0">{{ sousTitre() }}</p>
+  </div>
+  <a [routerLink]="['/demandes']" class="btn stb-btn-light">
+    <i class="feather icon-list me-1"></i>
+    Voir les demandes
+  </a>
+</div>
+
+@if (error()) {
+<div class="alert alert-danger" role="alert">{{ error() }}</div>
+}
+
+@if (loading()) {
+<p class="text-muted">Chargement des statistiques...</p>
+} @else if (stats(); as s) {
+
+@if (s.total === 0) {
+<div class="card stb-table-card">
+  <div class="card-body text-center py-5">
+    <i class="feather icon-inbox stb-vide__icone"></i>
+    <h6 class="mt-3">Aucune demande pour le moment</h6>
+    <p class="text-muted mb-3">
+      {{ estDemandeur() ? "Créez votre première demande pour suivre son avancement ici." : "Les indicateurs s'afficheront dès qu'une demande vous concernera." }}
+    </p>
+    @if (estDemandeur()) {
+    <a [routerLink]="['/demandes']" [queryParams]="{ nouvelle: '1' }" class="btn btn-primary">Créer une demande</a>
+    }
+  </div>
+</div>
+} @else {
+
+<!-- Indicateurs clés -->
+<div class="row">
+  <div class="col-lg-3 col-md-6 mb-4">
+    <div class="card stb-stat stb-stat--primary">
+      <div class="card-body">
+        <div class="stb-stat__entete">
+          <span class="stb-stat__label">{{ libelleTotal() }}</span>
+          <i class="feather icon-layers"></i>
+        </div>
+        <h2 class="stb-stat__value">{{ s.total }}</h2>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-md-6 mb-4">
+    <div class="card stb-stat">
+      <div class="card-body">
+        <div class="stb-stat__entete">
+          <span class="stb-stat__label">En cours de traitement</span>
+          <i class="feather icon-clock text-primary"></i>
+        </div>
+        <h2 class="stb-stat__value">{{ s.ouvertes }}</h2>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-md-6 mb-4">
+    <div class="card stb-stat">
+      <div class="card-body">
+        <div class="stb-stat__entete">
+          <span class="stb-stat__label">Clôturées</span>
+          <i class="feather icon-check-circle text-success"></i>
+        </div>
+        <h2 class="stb-stat__value">{{ s.cloturees }}</h2>
+        <div class="stb-progress mt-2">
+          <div class="stb-progress__fill" [style.width.%]="tauxCloture()"></div>
+        </div>
+        <small class="text-muted">{{ tauxCloture() }} % de clôture</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- La 4e tuile dépend du rôle : le superviseur pilote la charge, l'utilisateur suit ses délais -->
+  <div class="col-lg-3 col-md-6 mb-4">
+    @if (estSuperviseur()) {
+    <div class="card stb-stat" [class.stb-stat--alerte]="s.nonAffectees > 0">
+      <div class="card-body">
+        <div class="stb-stat__entete">
+          <span class="stb-stat__label">À affecter</span>
+          <i class="feather icon-user-plus"></i>
+        </div>
+        <h2 class="stb-stat__value">{{ s.nonAffectees }}</h2>
+        @if (s.nonAffectees > 0) {
+        <a [routerLink]="['/demandes']" [queryParams]="{ statut: 'NOUVELLE' }" class="small">Traiter maintenant →</a>
+        }
+      </div>
+    </div>
+    } @else {
+    <div class="card stb-stat">
+      <div class="card-body">
+        <div class="stb-stat__entete">
+          <span class="stb-stat__label">Temps moyen de traitement</span>
+          <i class="feather icon-trending-up text-primary"></i>
+        </div>
+        <h2 class="stb-stat__value">{{ tempsMoyenLisible() }}</h2>
+      </div>
+    </div>
+    }
+  </div>
+</div>
+
+<!-- Alerte retard : visible par tous, elle concerne chacun sur son périmètre -->
+@if (s.enRetard > 0) {
+<div class="stb-alerte mb-4">
+  <i class="feather icon-alert-triangle"></i>
+  <div class="flex-grow-1">
+    <strong>{{ s.enRetard }} demande(s) en retard</strong>
+    <div class="small">La date limite est dépassée et le traitement n'est pas terminé.</div>
+  </div>
+  <a [routerLink]="['/demandes']" class="btn btn-sm btn-light">Consulter</a>
+</div>
+}
+
+<div class="row">
+  <!-- Évolution mensuelle -->
+  <div class="col-lg-8 mb-4">
+    <div class="card stb-table-card h-100">
+      <div class="card-body">
+        <h6 class="mb-3">Évolution sur 12 mois</h6>
+        <apx-chart
+          [chart]="$any(graphiqueEvolution().chart)"
+          [colors]="$any(graphiqueEvolution().colors)"
+          [dataLabels]="$any(graphiqueEvolution().dataLabels)"
+          [stroke]="$any(graphiqueEvolution().stroke)"
+          [fill]="$any(graphiqueEvolution().fill)"
+          [series]="$any(graphiqueEvolution().series)"
+          [xaxis]="$any(graphiqueEvolution().xaxis)"
+          [yaxis]="$any(graphiqueEvolution().yaxis)"
+          [tooltip]="$any(graphiqueEvolution().tooltip)"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Répartition par statut -->
+  <div class="col-lg-4 mb-4">
+    <div class="card stb-table-card h-100">
+      <div class="card-body">
+        <h6 class="mb-3">Par statut</h6>
+        <apx-chart
+          [chart]="$any(graphiqueStatuts().chart)"
+          [colors]="$any(graphiqueStatuts().colors)"
+          [labels]="$any(graphiqueStatuts().labels)"
+          [series]="$any(graphiqueStatuts().series)"
+          [legend]="$any(graphiqueStatuts().legend)"
+          [dataLabels]="$any(graphiqueStatuts().dataLabels)"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Répartition par priorité -->
+  <div class="col-lg-6 mb-4">
+    <div class="card stb-table-card h-100">
+      <div class="card-body">
+        <h6 class="mb-3">Par priorité</h6>
+        <apx-chart
+          [chart]="$any(graphiquePriorites().chart)"
+          [colors]="$any(graphiquePriorites().colors)"
+          [plotOptions]="$any(graphiquePriorites().plotOptions)"
+          [dataLabels]="$any(graphiquePriorites().dataLabels)"
+          [series]="$any(graphiquePriorites().series)"
+          [xaxis]="$any(graphiquePriorites().xaxis)"
+          [yaxis]="$any(graphiquePriorites().yaxis)"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Par type de demande -->
+  <div class="col-lg-6 mb-4">
+    <div class="card stb-table-card h-100">
+      <div class="card-body">
+        <h6 class="mb-4">Par type de demande</h6>
+        @for (entree of parType(); track entree[0]) {
+        <div class="stb-bar-row">
+          <span class="stb-bar-row__label">{{ libelleType(entree[0]) }}</span>
+          <div class="stb-bar">
+            <div class="stb-bar__fill" [style.width.%]="pourcentage(entree[1])"></div>
+          </div>
+          <span class="stb-bar-row__value">{{ entree[1] }}</span>
+        </div>
+        } @empty {
+        <p class="text-muted mb-0">Aucune donnée.</p>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Charge par responsable : réservée à la supervision -->
+  @if (estSuperviseur()) {
+  <div class="col-12 mb-4">
+    <div class="card stb-table-card">
+      <div class="card-body">
+        <h6 class="mb-4">Charge par responsable</h6>
+        @for (entree of parResponsable(); track entree[0]) {
+        <div class="stb-bar-row">
+          <span class="stb-bar-row__label">{{ entree[0] }}</span>
+          <div class="stb-bar">
+            <div class="stb-bar__fill" [style.width.%]="pourcentage(entree[1])"></div>
+          </div>
+          <span class="stb-bar-row__value">{{ entree[1] }}</span>
+        </div>
+        } @empty {
+        <p class="text-muted mb-0">Aucune demande affectée pour le moment.</p>
+        }
+      </div>
+    </div>
+  </div>
+  }
+</div>
+} }

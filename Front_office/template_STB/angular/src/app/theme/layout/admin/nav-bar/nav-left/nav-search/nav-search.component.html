@@ -1,0 +1,49 @@
+<a href="javascript:void(0)" (click)="ouvrir()" class="pop-search" title="Rechercher une demande">
+  <i class="feather icon-search"></i>
+</a>
+
+@if (searchOn) {
+<div class="search-bar">
+  <input
+    type="text"
+    class="form-control border-0 shadow-none"
+    placeholder="Rechercher une demande (titre, numéro, description)..."
+    autofocus
+    [value]="terme()"
+    (input)="onTermeChange($any($event.target).value)"
+    (keydown.enter)="voirTousLesResultats()"
+  />
+  <button (click)="fermer()" type="button" class="btn-close close" aria-label="Fermer"></button>
+</div>
+
+<!-- Suggestions -->
+@if (terme().trim().length >= 2) {
+<div class="stb-recherche">
+  @if (recherche()) {
+  <p class="stb-recherche__vide mb-0">Recherche en cours...</p>
+  } @else if (resultats().length === 0) {
+  <p class="stb-recherche__vide mb-0">Aucune demande ne correspond à « {{ terme() }} ».</p>
+  } @else {
+  <ul class="stb-recherche__liste">
+    @for (demande of resultats(); track demande.id) {
+    <li class="stb-recherche__item" (click)="ouvrirDemande(demande)">
+      <div class="stb-recherche__entete">
+        <strong>{{ demande.titre }}</strong>
+        <span class="stb-recherche__statut" [class]="'stb-statut--' + demande.statut.toLowerCase()">
+          {{ statutLabels[demande.statut] }}
+        </span>
+      </div>
+      <small class="text-muted">{{ demande.numero }} · {{ typeLabels[demande.type] }} · {{ demande.demandeurNom }}</small>
+    </li>
+    }
+  </ul>
+
+  @if (total() > resultats().length) {
+  <button type="button" class="stb-recherche__tout" (click)="voirTousLesResultats()">
+    Voir les {{ total() }} résultats
+  </button>
+  }
+  }
+</div>
+}
+}

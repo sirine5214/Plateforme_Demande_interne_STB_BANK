@@ -1,0 +1,128 @@
+<div class="auth-wrapper">
+  <div class="stb-auth">
+    <!-- Panneau de marque -->
+    <aside class="stb-auth__brand">
+      <img src="assets/images/logo.png" alt="STB Bank" />
+      <h3>Rejoignez la plateforme</h3>
+      <p>Direction Développement Digital</p>
+      <ul class="stb-auth__points">
+        <li><i class="feather icon-edit"></i> Déposez vos demandes en quelques clics</li>
+        <li><i class="feather icon-bell"></i> Soyez notifié à chaque étape</li>
+        <li><i class="feather icon-paperclip"></i> Joignez vos pièces justificatives</li>
+      </ul>
+    </aside>
+
+    <!-- Formulaire -->
+    <div class="stb-auth__form">
+      <img src="assets/images/logo-dark.png" alt="STB Bank" class="stb-auth__logo-mobile" />
+
+      <h4>Créer un compte</h4>
+      <p class="stb-auth__soustitre">Renseignez vos informations pour commencer</p>
+
+      <form (ngSubmit)="onSubmit($event)">
+        @if (error()) {
+        <div class="alert alert-danger" role="alert">{{ error() }}</div>
+        }
+
+        <div class="stb-champ">
+          <i class="feather icon-user"></i>
+          <input
+            type="text"
+            id="username"
+            class="form-control"
+            placeholder="Nom complet"
+            [formField]="registerForm.username"
+            [class.is-invalid]="submitted() && registerForm.username().errors().length > 0"
+          />
+          @if (submitted() && registerForm.username().errors().length > 0) {
+          <div class="invalid-feedback">
+            @for (error of registerForm.username().errors(); track error.kind) {
+            <div>{{ error.message }}</div>
+            }
+          </div>
+          }
+        </div>
+
+        <div class="stb-champ">
+          <i class="feather icon-mail"></i>
+          <input
+            type="email"
+            class="form-control"
+            id="floatingInput"
+            placeholder="Adresse email"
+            [class.is-invalid]="submitted() && registerForm.email().invalid()"
+            [formField]="registerForm.email"
+          />
+          @if (submitted() && registerForm.email().invalid()) {
+          <div class="invalid-feedback">
+            @for (error of registerForm.email().errors(); track error.kind) {
+            <div>{{ error.message }}</div>
+            }
+          </div>
+          }
+        </div>
+
+        <div class="stb-champ">
+          <i class="feather icon-briefcase"></i>
+          <select
+            class="form-control"
+            id="role"
+            [formField]="registerForm.role"
+            [class.is-invalid]="submitted() && registerForm.role().errors().length > 0"
+          >
+            <option value="" disabled selected>Choisir un rôle</option>
+            @for (option of roleOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+          @if (submitted() && registerForm.role().errors().length > 0) {
+          <div class="invalid-feedback">
+            @for (error of registerForm.role().errors(); track error.kind) {
+            <div>{{ error.message }}</div>
+            }
+          </div>
+          }
+        </div>
+
+        <div class="stb-champ">
+          <i class="feather icon-lock"></i>
+          @if (!showPassword()) {
+          <input
+            type="password"
+            id="password"
+            class="form-control"
+            placeholder="Mot de passe (min. 8 caractères)"
+            [formField]="registerForm.password"
+            [class.is-invalid]="submitted() && registerForm.password().errors().length > 0"
+          />
+          } @else {
+          <input
+            type="text"
+            id="password"
+            class="form-control"
+            placeholder="Mot de passe (min. 8 caractères)"
+            [formField]="registerForm.password"
+            [class.is-invalid]="submitted() && registerForm.password().errors().length > 0"
+          />
+          }
+          @if (submitted() && registerForm.password().errors().length > 0) {
+          <div class="invalid-feedback">
+            @for (error of registerForm.password().errors(); track error.kind) {
+            <div>{{ error.message }}</div>
+            }
+          </div>
+          }
+        </div>
+
+        <button type="submit" class="stb-auth__submit mt-2" [disabled]="loading()">
+          @if (loading()) { Inscription en cours... } @else { S'inscrire }
+        </button>
+      </form>
+
+      <p class="stb-auth__liens">
+        Vous avez déjà un compte ?
+        <a [routerLink]="['/login']">Se connecter</a>
+      </p>
+    </div>
+  </div>
+</div>

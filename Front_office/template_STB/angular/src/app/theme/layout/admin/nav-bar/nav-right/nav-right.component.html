@@ -1,0 +1,102 @@
+<ul class="navbar-nav ms-auto">
+  <li>
+    <div ngbDropdown placement="auto">
+      <a ngbDropdownToggle href="javascript:void(0)">
+        <i class="icon feather icon-bell" title="Notifications"></i>
+        @if (nonLues() > 0) {
+        <span class="badge bg-danger">{{ nonLues() }}<span class="sr-only">non lues</span></span>
+        }
+      </a>
+      <div ngbDropdownMenu class="dropdown-menu-end notification">
+        <div class="noti-head">
+          <h6 class="d-inline-block m-b-0">Notifications</h6>
+          @if (nonLues() > 0) {
+          <div class="float-end">
+            <a href="javascript:void(0)" (click)="toutMarquerCommeLu($event)">Tout marquer comme lu</a>
+          </div>
+          }
+        </div>
+        <ul class="noti-body">
+          @for (notif of notifications(); track notif.id) {
+          <li class="notification stb-noti" [class.bg-light]="!notif.lu" (click)="ouvrirNotification(notif)">
+            <div class="d-flex">
+              <span
+                class="stb-noti-icon"
+                [class.stb-noti-icon--lue]="notif.lu"
+                [class.stb-noti-icon--message]="notif.type === 'MESSAGE'"
+              >
+                <i class="feather" [class.icon-message-square]="notif.type === 'MESSAGE'" [class.icon-bell]="notif.type !== 'MESSAGE'"></i>
+              </span>
+              <div class="flex-grow-1">
+                <p class="mb-1">
+                  <strong>{{ notif.auteurNom }}</strong>
+                  <span class="n-time text-muted">
+                    <i class="icon feather icon-clock m-r-10"></i>
+                    {{ notif.dateEnvoi | date: 'dd/MM HH:mm' }}
+                  </span>
+                </p>
+                <p class="mb-1">{{ notif.message }}</p>
+                <p class="mb-0">
+                  @if (notif.typeDemande) {
+                  <span class="stb-noti-type">{{ typeLabels[notif.typeDemande] }}</span>
+                  }
+                  @if (notif.demandeNumero) {
+                  <small class="text-muted ms-2">{{ notif.demandeNumero }}</small>
+                  }
+                </p>
+              </div>
+              @if (!notif.lu) {
+              <a href="javascript:void(0)" title="Marquer comme lue" (click)="marquerCommeLue(notif.id, $event)">
+                <i class="feather icon-check"></i>
+              </a>
+              }
+            </div>
+          </li>
+          } @empty {
+          <li class="notification">
+            <p class="text-muted mb-0">Aucune notification.</p>
+          </li>
+          }
+        </ul>
+      </div>
+    </div>
+  </li>
+  <li>
+    <div class="drp-user" ngbDropdown placement="auto">
+      <a href="javascript:void(0)" ngbDropdownToggle>
+        <img [src]="avatarUrl()" class="img-radius wid-40" alt="User-Profile-Image" />
+      </a>
+      <div class="dropdown-menu-end profile-notification" ngbDropdownMenu>
+        <div class="pro-head">
+          <img [src]="avatarUrl()" class="img-radius" alt="User-Profile-Image" />
+          <span>{{ currentUser()?.nom || 'Utilisateur' }}</span>
+          <a href="javascript:void(0)" class="dud-logout" title="Déconnexion" (click)="logout()">
+            <i class="feather icon-log-out"></i>
+          </a>
+        </div>
+        <ul class="pro-body">
+          <li>
+            <a [routerLink]="['/profile']" ngbDropdownItem>
+              <i class="feather icon-user"></i>
+              Profil
+            </a>
+          </li>
+          @if (currentUser()?.role === 'ADMINISTRATEUR') {
+          <li>
+            <a [routerLink]="['/admin/dashboard']" ngbDropdownItem>
+              <i class="feather icon-settings"></i>
+              Administration
+            </a>
+          </li>
+          }
+          <li>
+            <a href="javascript:void(0)" ngbDropdownItem (click)="logout()">
+              <i class="feather icon-log-out"></i>
+              Déconnexion
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </li>
+</ul>

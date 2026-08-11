@@ -1,0 +1,289 @@
+// =====================================================
+//  Styles partagés des écrans de gestion (palette STB)
+//  Utilisé par : gestion des utilisateurs, demandes
+// =====================================================
+
+$stb-blue: #0080c9;
+$stb-blue-deep: #0477bf;
+$stb-blue-dark: #005e94;
+$stb-cyan: #05f2db;
+$stb-ink: #0d0d0d;
+
+.stb-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1.75rem 2rem;
+  margin-bottom: 1.5rem;
+  border-radius: 12px;
+  background: linear-gradient(120deg, $stb-blue-dark 0%, $stb-blue 55%, $stb-blue-deep 100%);
+  box-shadow: 0 6px 18px rgba(4, 119, 191, 0.25);
+
+  &__title {
+    margin: 0;
+    color: #fff;
+    font-weight: 600;
+  }
+}
+
+.stb-btn-light {
+  background: #fff;
+  color: $stb-blue-deep;
+  font-weight: 600;
+  border: none;
+  padding: 0.55rem 1.4rem;
+  border-radius: 8px;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.9);
+    color: $stb-blue-dark;
+  }
+}
+
+.stb-search-card,
+.stb-table-card {
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(13, 13, 13, 0.06);
+}
+
+.stb-search-card {
+  margin-bottom: 1.25rem;
+}
+
+.stb-search {
+  position: relative;
+  min-width: 240px;
+
+  i {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    transform: translateY(-50%);
+    color: $stb-blue;
+  }
+
+  .form-control {
+    padding-left: 40px;
+    height: 46px;
+    background: #f6f8fa;
+    border: 1px solid #e6eaee;
+    border-radius: 8px;
+
+    &:focus {
+      background: #fff;
+      border-color: $stb-blue;
+      box-shadow: 0 0 0 0.2rem rgba(0, 128, 201, 0.15);
+    }
+  }
+}
+
+.stb-filter {
+  width: auto;
+  min-width: 180px;
+  height: 46px;
+  border-radius: 8px;
+  border: 1px solid #e6eaee;
+}
+
+.stb-count {
+  background: linear-gradient(120deg, $stb-blue 0%, $stb-blue-deep 100%);
+  color: #fff;
+  font-weight: 600;
+  padding: 0.7rem 1.3rem;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.stb-table {
+  thead tr {
+    background: linear-gradient(120deg, $stb-blue-dark 0%, $stb-blue 100%);
+  }
+
+  thead th {
+    color: #fff;
+    font-weight: 600;
+    border: none;
+    padding: 1rem 1.25rem;
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 1rem 1.25rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #eef1f4;
+  }
+
+  tbody tr:hover {
+    background: rgba(0, 128, 201, 0.04);
+  }
+}
+
+.stb-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(120deg, $stb-blue 0%, $stb-cyan 140%);
+  color: #fff;
+}
+
+.stb-badge {
+  display: inline-block;
+  padding: 0.4rem 0.9rem;
+  border-radius: 20px;
+  background: $stb-blue;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+
+  &--admin {
+    background: linear-gradient(120deg, #0511f2 0%, $stb-blue-deep 100%);
+  }
+}
+
+.stb-status {
+  display: inline-block;
+  padding: 0.4rem 0.9rem;
+  border-radius: 20px;
+  background: rgba(5, 242, 219, 0.18);
+  color: #067a6d;
+  font-size: 12px;
+  font-weight: 600;
+
+  &--off {
+    background: rgba(13, 13, 13, 0.08);
+    color: #6c757d;
+  }
+}
+
+.stb-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid #e6eaee;
+  background: #fff;
+  color: $stb-blue-deep;
+  transition: all 0.15s ease-in-out;
+
+  &:hover:not(:disabled) {
+    background: $stb-blue;
+    border-color: $stb-blue;
+    color: #fff;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  &--danger {
+    color: #d9534f;
+
+    &:hover:not(:disabled) {
+      background: #d9534f;
+      border-color: #d9534f;
+      color: #fff;
+    }
+  }
+}
+
+.stb-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid #eef1f4;
+
+  &__info {
+    font-size: 13px;
+    color: #8a94a0;
+  }
+
+  &__boutons {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  &__taille {
+    width: auto;
+    min-width: 130px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid #e6eaee;
+    font-size: 13px;
+  }
+}
+
+.stb-page {
+  min-width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid #e6eaee;
+  background: #fff;
+  color: $stb-ink;
+  font-weight: 500;
+
+  &:hover:not(:disabled):not(.stb-page--active) {
+    border-color: $stb-blue;
+    color: $stb-blue;
+  }
+
+  &--active {
+    background: linear-gradient(120deg, $stb-blue 0%, $stb-blue-deep 100%);
+    border-color: transparent;
+    color: #fff;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+// ---- Modal ----
+
+.stb-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 13, 13, 0.5);
+  z-index: 1050;
+}
+
+.stb-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(560px, calc(100vw - 2rem));
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(13, 13, 13, 0.3);
+  z-index: 1060;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.1rem 1.5rem;
+    background: linear-gradient(120deg, $stb-blue-dark 0%, $stb-blue 100%);
+    color: #fff;
+    border-radius: 12px 12px 0 0;
+  }
+
+  &__body {
+    padding: 1.5rem;
+  }
+}

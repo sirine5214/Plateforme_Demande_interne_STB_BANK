@@ -1,0 +1,211 @@
+// =====================================================
+//  Écrans d'authentification — identité visuelle STB
+// =====================================================
+
+$stb-blue: #0080c9;
+$stb-blue-deep: #0477bf;
+$stb-blue-dark: #00537f;
+$stb-cyan: #05f2db;
+
+:host ::ng-deep .auth-wrapper {
+  background: linear-gradient(135deg, $stb-blue-dark 0%, $stb-blue 55%, $stb-blue-deep 100%);
+  padding: 2rem 1rem;
+}
+
+.stb-auth {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: min(940px, 100%);
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(0, 40, 70, 0.28);
+
+  @media (max-width: 991px) {
+    grid-template-columns: 1fr;
+    width: min(460px, 100%);
+  }
+}
+
+// ---- Panneau de marque (masqué sur mobile) ----
+.stb-auth__brand {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 3rem 2.5rem;
+  color: #fff;
+  background: linear-gradient(150deg, $stb-blue-dark 0%, $stb-blue-deep 100%);
+  overflow: hidden;
+
+  // Halo décoratif
+  &::after {
+    content: '';
+    position: absolute;
+    right: -70px;
+    bottom: -90px;
+    width: 260px;
+    height: 260px;
+    border-radius: 50%;
+    background: rgba(5, 242, 219, 0.14);
+  }
+
+  @media (max-width: 991px) {
+    display: none;
+  }
+
+  img {
+    width: 190px;
+    position: relative;
+    z-index: 1;
+  }
+
+  h3 {
+    color: #fff;
+    font-weight: 600;
+    line-height: 1.35;
+    position: relative;
+    z-index: 1;
+  }
+
+  p {
+    color: rgba(255, 255, 255, 0.82);
+    margin: 0;
+    position: relative;
+    z-index: 1;
+  }
+}
+
+.stb-auth__points {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  position: relative;
+  z-index: 1;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 0.7rem;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.9);
+
+    i {
+      color: $stb-cyan;
+    }
+  }
+}
+
+// ---- Panneau formulaire ----
+.stb-auth__form {
+  padding: 3rem 2.75rem;
+  text-align: left;
+
+  @media (max-width: 575px) {
+    padding: 2.25rem 1.5rem;
+  }
+
+  // Logo affiché uniquement quand le panneau de marque est masqué
+  .stb-auth__logo-mobile {
+    display: none;
+    width: 150px;
+    margin: 0 auto 1.5rem;
+
+    @media (max-width: 991px) {
+      display: block;
+    }
+  }
+
+  h4 {
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+  }
+
+  .stb-auth__soustitre {
+    color: #8a94a0;
+    font-size: 14px;
+    margin-bottom: 1.75rem;
+  }
+}
+
+// ---- Champs avec icône ----
+.stb-champ {
+  position: relative;
+  margin-bottom: 1rem;
+
+  > i {
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    transform: translateY(-50%);
+    color: #a8b1bb;
+    pointer-events: none;
+    transition: color 0.15s ease-in-out;
+  }
+
+  .form-control,
+  select.form-control {
+    height: 48px;
+    padding-left: 44px;
+    background: #f6f8fa;
+    border: 1px solid #e6eaee;
+    border-radius: 10px;
+
+    &:focus {
+      background: #fff;
+      border-color: $stb-blue;
+      box-shadow: 0 0 0 0.2rem rgba(0, 128, 201, 0.15);
+    }
+
+    &.is-invalid {
+      border-color: #d9534f;
+      background: #fff;
+    }
+  }
+
+  &:focus-within > i {
+    color: $stb-blue;
+  }
+
+  .invalid-feedback {
+    display: block;
+    margin-top: 0.35rem;
+  }
+}
+
+// ---- Bouton principal ----
+.stb-auth__submit {
+  width: 100%;
+  height: 48px;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(120deg, $stb-blue 0%, $stb-blue-deep 100%);
+  transition: filter 0.15s ease-in-out;
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.07);
+  }
+
+  &:disabled {
+    opacity: 0.65;
+  }
+}
+
+.stb-auth__liens {
+  margin-top: 1.5rem;
+  font-size: 14px;
+  color: #8a94a0;
+
+  a {
+    color: $stb-blue-deep;
+    font-weight: 600;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}

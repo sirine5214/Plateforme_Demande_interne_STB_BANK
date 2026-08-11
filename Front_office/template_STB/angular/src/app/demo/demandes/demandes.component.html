@@ -1,0 +1,529 @@
+<div class="stb-banner">
+  <h4 class="stb-banner__title">{{ titrePage() }}</h4>
+  @if (estDemandeur() || estChef()) {
+  <button type="button" class="btn stb-btn-light" (click)="openCreate()">
+    <i class="feather icon-plus me-1"></i>
+    Nouvelle demande
+  </button>
+  }
+</div>
+
+@if (success()) {
+<div class="alert alert-success alert-dismissible" role="alert">
+  {{ success() }}
+  <button type="button" class="btn-close" (click)="success.set('')"></button>
+</div>
+}
+@if (error()) {
+<div class="alert alert-danger alert-dismissible" role="alert">
+  {{ error() }}
+  <button type="button" class="btn-close" (click)="error.set('')"></button>
+</div>
+}
+
+<!-- Recherche multicritère (BF 2.6) -->
+<div class="card stb-search-card">
+  <div class="card-body">
+    <div class="d-flex align-items-center gap-3 flex-wrap mb-3">
+      <div class="stb-search flex-grow-1">
+        <i class="feather icon-search"></i>
+        <input
+          type="text"
+          class="form-control"
+          placeholder="Rechercher par titre, numéro ou description..."
+          [value]="search()"
+          (input)="onSearchChange($any($event.target).value)"
+        />
+      </div>
+      <span class="stb-count">{{ totalElements() }} demande(s)</span>
+    </div>
+
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <select class="form-control stb-filter" [value]="filtreStatut()" (change)="onStatutFiltreChange($any($event.target).value)">
+        <option value="">Tous les statuts</option>
+        @for (statut of statutOptions; track statut) {
+        <option [value]="statut">{{ statutLabels[statut] }}</option>
+        }
+      </select>
+
+      <select class="form-control stb-filter" [value]="filtrePriorite()" (change)="onPrioriteFiltreChange($any($event.target).value)">
+        <option value="">Toutes les priorités</option>
+        @for (priorite of prioriteOptions; track priorite) {
+        <option [value]="priorite">{{ prioriteLabels[priorite] }}</option>
+        }
+      </select>
+
+      <select class="form-control stb-filter" [value]="filtreType()" (change)="onTypeFiltreChange($any($event.target).value)">
+        <option value="">Tous les types</option>
+        @for (type of typeOptions; track type) {
+        <option [value]="type">{{ typeLabels[type] }}</option>
+        }
+      </select>
+
+      <div class="d-flex align-items-center gap-2">
+        <label class="text-muted mb-0 small" for="dateDebut">Du</label>
+        <input
+          type="date"
+          id="dateDebut"
+          class="form-control stb-filter"
+          [value]="dateDebut()"
+          (change)="onDateDebutChange($any($event.target).value)"
+        />
+        <label class="text-muted mb-0 small" for="dateFin">au</label>
+        <input
+          type="date"
+          id="dateFin"
+          class="form-control stb-filter"
+          [value]="dateFin()"
+          (change)="onDateFinChange($any($event.target).value)"
+        />
+      </div>
+
+      <button type="button" class="btn btn-light" (click)="reinitialiserFiltres()">
+        <i class="feather icon-refresh-cw me-1"></i>
+        Réinitialiser
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Tableau -->
+<div class="card stb-table-card">
+  <div class="card-body p-0">
+    @if (loading()) {
+    <p class="text-muted p-4 mb-0">Chargement...</p>
+    } @else if (demandes().length === 0) {
+    <p class="text-muted p-4 mb-0">Aucune demande à afficher.</p>
+    } @else {
+    <div class="table-responsive">
+      <table class="table stb-table mb-0">
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th>Titre</th>
+            <th>Type</th>
+            <th>Priorité</th>
+            <th>Statut</th>
+            @if (!estDemandeur()) {
+            <th>Demandeur</th>
+            }
+            <th>Responsable</th>
+            <th>Créée le</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (demande of demandes(); track demande.id) {
+          <tr>
+            <td class="text-muted">{{ demande.numero }}</td>
+            <td>
+              <strong>{{ demande.titre }}</strong>
+              @if (demande.description) {
+              <div class="stb-desc">{{ demande.description }}</div>
+              }
+            </td>
+            <td class="text-muted">{{ typeLabels[demande.type] }}</td>
+            <td>
+              <span class="stb-priorite" [class]="'stb-priorite--' + demande.priorite.toLowerCase()">
+                {{ prioriteLabels[demande.priorite] }}
+              </span>
+            </td>
+            <td>
+              <span class="stb-statut" [class]="'stb-statut--' + demande.statut.toLowerCase()">
+                {{ statutLabels[demande.statut] }}
+              </span>
+            </td>
+            @if (!estDemandeur()) {
+            <td class="text-muted">{{ demande.demandeurNom }}</td>
+            }
+            <td>
+              @if (estChef()) {
+              <select
+                class="form-control form-control-sm stb-inline-select"
+                [value]="demande.responsableId ?? ''"
+                [disabled]="busyId() === demande.id"
+                (change)="affecter(demande, $any($event.target).value)"
+              >
+                <option value="">Non affectée</option>
+                @for (user of affectables(); track user.id) {
+                <option [value]="user.id">{{ user.nom }}</option>
+                }
+              </select>
+              } @else {
+              <span class="text-muted">{{ demande.responsableNom || 'Non affectée' }}</span>
+              }
+            </td>
+            <td class="text-muted">{{ demande.dateCreation | date: 'dd/MM/yyyy' }}</td>
+            <td>
+              <div class="d-flex justify-content-end align-items-center gap-2">
+                @if (statutsProposes(demande).length > 0) {
+                <select
+                  class="form-control form-control-sm stb-inline-select"
+                  [value]="demande.statut"
+                  [disabled]="busyId() === demande.id"
+                  (change)="changerStatut(demande, $any($event.target).value)"
+                >
+                  <option [value]="demande.statut">{{ statutLabels[demande.statut] }}</option>
+                  @for (statut of statutsProposes(demande); track statut) {
+                  <option [value]="statut">→ {{ statutLabels[statut] }}</option>
+                  }
+                </select>
+                }
+                <button type="button" class="stb-action" title="Pièces jointes" (click)="ouvrirPieces(demande)">
+                  <i class="feather icon-paperclip"></i>
+                </button>
+                <button type="button" class="stb-action" title="Historique des statuts" (click)="ouvrirHistorique(demande)">
+                  <i class="feather icon-clock"></i>
+                </button>
+                <button
+                  type="button"
+                  class="stb-action"
+                  [title]="peutModifier(demande) ? 'Modifier la demande' : 'Consulter la demande et ses fichiers'"
+                  (click)="openEdit(demande)"
+                >
+                  <i class="feather" [class.icon-edit-2]="peutModifier(demande)" [class.icon-eye]="!peutModifier(demande)"></i>
+                </button>
+                @if (peutSupprimer(demande)) {
+                <button
+                  type="button"
+                  class="stb-action stb-action--danger"
+                  title="Supprimer"
+                  [disabled]="busyId() === demande.id"
+                  (click)="supprimer(demande)"
+                >
+                  <i class="feather icon-trash-2"></i>
+                </button>
+                }
+              </div>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination : toujours affichée pour indiquer la portée des résultats -->
+    <div class="stb-pagination">
+      <span class="stb-pagination__info">
+        Affichage de {{ premierIndex() }} à {{ dernierIndex() }} sur {{ totalElements() }} demande(s)
+      </span>
+
+      <div class="stb-pagination__boutons">
+        <button type="button" class="stb-page" [disabled]="page() === 1" (click)="goToPage(page() - 1)" title="Page précédente">
+          <i class="feather icon-chevron-left"></i>
+        </button>
+        @for (p of pages(); track p) {
+        <button type="button" class="stb-page" [class.stb-page--active]="p === page()" (click)="goToPage(p)">{{ p }}</button>
+        }
+        <button
+          type="button"
+          class="stb-page"
+          [disabled]="page() === totalPages()"
+          (click)="goToPage(page() + 1)"
+          title="Page suivante"
+        >
+          <i class="feather icon-chevron-right"></i>
+        </button>
+      </div>
+
+      <select class="form-control stb-pagination__taille" [value]="taillePage()" (change)="onTaillePageChange($any($event.target).value)">
+        @for (taille of taillesDisponibles; track taille) {
+        <option [value]="taille">{{ taille }} par page</option>
+        }
+      </select>
+    </div>
+    }
+  </div>
+</div>
+
+<!-- Modal création / modification -->
+@if (modalOpen()) {
+<div class="stb-modal-backdrop" (click)="closeModal()"></div>
+<div class="stb-modal">
+  <div class="stb-modal__header">
+    <h5 class="mb-0">
+      @if (!demandeEnEdition()) { Nouvelle demande } @else if (lectureSeule()) { Demande {{ demandeEnEdition()!.numero }} } @else {
+      Modifier la demande {{ demandeEnEdition()!.numero }} }
+    </h5>
+    <button type="button" class="btn-close btn-close-white" (click)="closeModal()"></button>
+  </div>
+
+  <form class="stb-modal__body" (ngSubmit)="submitForm()">
+    @if (formError()) {
+    <div class="alert alert-danger">{{ formError() }}</div>
+    }
+
+    <!-- Suivi de la demande en cours de modification -->
+    @if (demandeEnEdition(); as d) {
+    <div class="stb-recap mb-3">
+      <div>
+        <span class="stb-recap__label">Statut</span>
+        <span class="stb-statut" [class]="'stb-statut--' + d.statut.toLowerCase()">{{ statutLabels[d.statut] }}</span>
+      </div>
+      <div>
+        <span class="stb-recap__label">Responsable</span>
+        <strong>{{ d.responsableNom || 'Non affectée' }}</strong>
+      </div>
+      <div>
+        <span class="stb-recap__label">Créée le</span>
+        <strong>{{ d.dateCreation | date: 'dd/MM/yyyy' }}</strong>
+      </div>
+      <div>
+        <span class="stb-recap__label">Demandeur</span>
+        <strong>{{ d.demandeurNom }}</strong>
+      </div>
+    </div>
+    }
+
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label class="form-label" for="type">Type *</label>
+        <select
+          id="type"
+          class="form-control"
+          name="type"
+          [ngModel]="form.type"
+          (ngModelChange)="onTypeFormulaireChange($event)"
+          [disabled]="lectureSeule()"
+          required
+        >
+          @for (type of typeOptions; track type) {
+          <option [value]="type">{{ typeLabels[type] }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="col-md-6 mb-3">
+        <label class="form-label" for="priorite">Priorité *</label>
+        <select id="priorite" class="form-control" name="priorite" [(ngModel)]="form.priorite" [disabled]="lectureSeule()" required>
+          @for (priorite of prioriteOptions; track priorite) {
+          <option [value]="priorite">{{ prioriteLabels[priorite] }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <!-- Consigne propre au type sélectionné -->
+    <div class="stb-guide mb-3">
+      <i class="feather icon-info me-2"></i>
+      <div>
+        <div>{{ guideCourant().aide }}</div>
+        <small class="text-muted">
+          Pièces attendues : {{ guideCourant().piecesAttendues.join(', ') }}
+          @if (guideCourant().pieceObligatoire) {
+          <strong class="text-danger"> (obligatoire)</strong>
+          }
+        </small>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label" for="titre">Titre *</label>
+      <input type="text" id="titre" class="form-control" name="titre" [(ngModel)]="form.titre" [disabled]="lectureSeule()" required />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label" for="description">Description</label>
+      <textarea
+        id="description"
+        class="form-control"
+        rows="7"
+        name="description"
+        [(ngModel)]="form.description"
+        [disabled]="lectureSeule()"
+      ></textarea>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label" for="dateLimite">Date limite souhaitée</label>
+      <input type="date" id="dateLimite" class="form-control" name="dateLimite" [(ngModel)]="form.dateLimite" [disabled]="lectureSeule()" />
+    </div>
+
+    <!-- Pièces jointes gérées depuis le même écran -->
+    <div class="stb-section mb-3">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <label class="form-label mb-0">Pièces jointes</label>
+        @if (demandeEnEdition() && !fichiersVerrouilles()) {
+        <label for="piece-inline" class="btn btn-sm btn-outline-primary mb-0" [class.disabled]="piecesEnvoi()">
+          <i class="feather icon-upload me-1"></i>
+          @if (piecesEnvoi()) { Envoi... } @else { Ajouter }
+        </label>
+        <input type="file" id="piece-inline" class="d-none" [disabled]="piecesEnvoi()" (change)="onFichierSelectionne($event)" />
+        }
+      </div>
+
+      @if (!demandeEnEdition()) {
+      <p class="text-muted small mb-0">Les fichiers pourront être ajoutés une fois la demande créée.</p>
+      } @else if (piecesLoading()) {
+      <p class="text-muted small mb-0">Chargement des fichiers...</p>
+      } @else {
+      <ul class="stb-fichiers mb-0">
+        @for (piece of pieces(); track piece.id) {
+        <li class="stb-fichiers__item">
+          <i class="feather icon-file-text me-2 text-muted"></i>
+          <a [href]="urlFichier(piece)" target="_blank" rel="noopener" class="flex-grow-1">{{ piece.nomFichier }}</a>
+          <small class="text-muted me-3">{{ tailleLisible(piece.tailleOctets) }}</small>
+          @if (!fichiersVerrouilles()) {
+          <button type="button" class="stb-action stb-action--danger" title="Supprimer" (click)="supprimerPiece(piece)">
+            <i class="feather icon-trash-2"></i>
+          </button>
+          }
+        </li>
+        } @empty {
+        <li class="text-muted small">Aucun fichier joint.</li>
+        }
+      </ul>
+      @if (fichiersVerrouilles()) {
+      <p class="text-muted small mb-0 mt-2">
+        <i class="feather icon-lock me-1"></i>
+        Les fichiers ne sont plus modifiables sur une demande clôturée.
+      </p>
+      }
+      }
+    </div>
+
+    <!-- Discussion demandeur ↔ responsable -->
+    @if (demandeEnEdition()) {
+    <div class="stb-section mb-3" id="section-discussion">
+      <label class="form-label">Discussion</label>
+
+      @if (messagesLoading()) {
+      <p class="text-muted small mb-0">Chargement de la conversation...</p>
+      } @else {
+      <div class="stb-fil">
+        @for (message of messages(); track message.id) {
+        <div class="stb-fil__ligne" [class.stb-fil__ligne--moi]="estMonMessage(message)">
+          <img [src]="avatarMessage(message)" class="stb-fil__avatar" alt="" />
+          <div class="stb-fil__bulle">
+            <div class="stb-fil__auteur">{{ estMonMessage(message) ? 'Vous' : message.expediteurNom }}</div>
+            <div class="stb-fil__texte">{{ message.contenu }}</div>
+            <div class="stb-fil__heure">{{ message.dateEnvoi | date: 'dd/MM HH:mm' }}</div>
+          </div>
+        </div>
+        } @empty {
+        <p class="text-muted small mb-0">Aucun message. Démarrez la conversation ci-dessous.</p>
+        }
+      </div>
+
+      <div class="stb-fil__saisie">
+        <input
+          type="text"
+          class="form-control"
+          name="messageEnCours"
+          placeholder="Écrire un message..."
+          [(ngModel)]="messageEnCours"
+          [disabled]="envoiMessage()"
+          (keydown.enter)="$event.preventDefault(); envoyerMessage()"
+        />
+        <button type="button" class="btn btn-primary" [disabled]="envoiMessage() || !messageEnCours.trim()" (click)="envoyerMessage()">
+          <i class="feather icon-send"></i>
+        </button>
+      </div>
+      }
+    </div>
+    }
+
+    <div class="d-flex justify-content-end gap-2 pt-2">
+      <button type="button" class="btn btn-light" (click)="closeModal()">
+        {{ lectureSeule() ? 'Fermer' : 'Annuler' }}
+      </button>
+      @if (!lectureSeule()) {
+      <button type="submit" class="btn btn-primary" [disabled]="saving()">
+        @if (saving()) { Enregistrement... } @else { {{ demandeEnEdition() ? 'Enregistrer' : 'Créer la demande' }} }
+      </button>
+      }
+    </div>
+  </form>
+</div>
+}
+
+<!-- Historique des statuts (BF 2.3.2) -->
+@if (historiqueOpen()) {
+<div class="stb-modal-backdrop" (click)="fermerHistorique()"></div>
+<div class="stb-modal">
+  <div class="stb-modal__header">
+    <h5 class="mb-0">Historique — {{ demandeHistorique()?.numero }}</h5>
+    <button type="button" class="btn-close btn-close-white" (click)="fermerHistorique()"></button>
+  </div>
+
+  <div class="stb-modal__body">
+    @if (historiqueLoading()) {
+    <p class="text-muted mb-0">Chargement de l'historique...</p>
+    } @else {
+    <ul class="stb-timeline">
+      @for (ligne of historique(); track ligne.id) {
+      <li class="stb-timeline__item">
+        <div class="stb-timeline__dot"></div>
+        <div>
+          <div>
+            @if (ligne.ancienStatut) {
+            <span class="stb-statut" [class]="'stb-statut--' + ligne.ancienStatut.toLowerCase()">
+              {{ statutLabels[ligne.ancienStatut] }}
+            </span>
+            <i class="feather icon-arrow-right mx-2 text-muted"></i>
+            }
+            <span class="stb-statut" [class]="'stb-statut--' + ligne.nouveauStatut.toLowerCase()">
+              {{ statutLabels[ligne.nouveauStatut] }}
+            </span>
+          </div>
+          <small class="text-muted">
+            {{ ligne.dateChangement | date: 'dd/MM/yyyy HH:mm' }} — par {{ ligne.auteurNom }}
+          </small>
+        </div>
+      </li>
+      } @empty {
+      <li class="text-muted">Aucun changement enregistré.</li>
+      }
+    </ul>
+    }
+
+    <div class="d-flex justify-content-end pt-3">
+      <button type="button" class="btn btn-light" (click)="fermerHistorique()">Fermer</button>
+    </div>
+  </div>
+</div>
+}
+
+<!-- Pièces jointes (BF 2.2.6) -->
+@if (piecesOpen()) {
+<div class="stb-modal-backdrop" (click)="fermerPieces()"></div>
+<div class="stb-modal">
+  <div class="stb-modal__header">
+    <h5 class="mb-0">Pièces jointes — {{ demandePieces()?.numero }}</h5>
+    <button type="button" class="btn-close btn-close-white" (click)="fermerPieces()"></button>
+  </div>
+
+  <div class="stb-modal__body">
+    <div class="mb-3">
+      <label for="piece-jointe" class="btn btn-outline-primary btn-sm mb-0" [class.disabled]="piecesEnvoi()">
+        <i class="feather icon-upload me-1"></i>
+        @if (piecesEnvoi()) { Envoi en cours... } @else { Ajouter un fichier }
+      </label>
+      <input type="file" id="piece-jointe" class="d-none" [disabled]="piecesEnvoi()" (change)="onFichierSelectionne($event)" />
+    </div>
+
+    @if (piecesLoading()) {
+    <p class="text-muted mb-0">Chargement des pièces jointes...</p>
+    } @else {
+    <ul class="stb-fichiers">
+      @for (piece of pieces(); track piece.id) {
+      <li class="stb-fichiers__item">
+        <i class="feather icon-file-text me-2 text-muted"></i>
+        <a [href]="urlFichier(piece)" target="_blank" rel="noopener" class="flex-grow-1">{{ piece.nomFichier }}</a>
+        <small class="text-muted me-3">{{ tailleLisible(piece.tailleOctets) }}</small>
+        <button type="button" class="stb-action stb-action--danger" title="Supprimer" (click)="supprimerPiece(piece)">
+          <i class="feather icon-trash-2"></i>
+        </button>
+      </li>
+      } @empty {
+      <li class="text-muted">Aucune pièce jointe.</li>
+      }
+    </ul>
+    }
+
+    <div class="d-flex justify-content-end pt-3">
+      <button type="button" class="btn btn-light" (click)="fermerPieces()">Fermer</button>
+    </div>
+  </div>
+</div>
+}
