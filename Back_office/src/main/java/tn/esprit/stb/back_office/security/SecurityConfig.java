@@ -76,6 +76,8 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
+                        // Probes Kubernetes (liveness/readiness) et scrape Prometheus : pas de JWT disponible
+                        .requestMatchers("/actuator/health/**", "/actuator/prometheus").permitAll()
                         // Le handshake WebSocket est authentifié par JwtHandshakeInterceptor
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMINISTRATEUR")

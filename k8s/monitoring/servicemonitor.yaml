@@ -1,0 +1,26 @@
+# Ne s'applique que si kube-prometheus-stack (Prometheus Operator) est installé sur le cluster :
+#   helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+#   helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+#       -n monitoring --create-namespace
+#
+# Sans Prometheus Operator, les annotations prometheus.io/* déjà posées sur le Deployment
+# backend (k8s/backend.yaml) suffisent pour un Prometheus "classique" configuré en
+# kubernetes_sd_configs avec role: pod.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: stb-backend
+  namespace: stb-bank
+  labels:
+    release: kube-prometheus-stack # doit correspondre au sélecteur serviceMonitorSelector du chart
+spec:
+  namespaceSelector:
+    matchNames:
+      - stb-bank
+  selector:
+    matchLabels:
+      app: backend
+  endpoints:
+    - port: http # nom du port exposé par le Service backend (k8s/backend.yaml)
+      path: /actuator/prometheus
+      interval: 15s

@@ -1,0 +1,105 @@
+networks:
+  stb-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  backend-uploads:
+  grafana-data:
+  prometheus-data:
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: stb-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-stb_bank}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stb-network
+
+  backend:
+    build:
+      context: ./Back_office
+      dockerfile: Dockerfile
+    image: stb-bank/back-office:local
+    container_name: stb-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-stb_bank}
+      DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      JWT_SECRET: ${JWT_SECRET:-change-me-generate-a-long-random-base64-string}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+    volumes:
+      - backend-uploads:/app/uploads
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    networks:
+      - stb-network
+
+  frontend:
+    build:
+      context: ./Front_office/template_STB/angular
+      dockerfile: Dockerfile
+    image: stb-bank/front-office:local
+    container_name: stb-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      BACKEND_HOST: backend
+      BACKEND_PORT: 8080
+    ports:
+      - "${FRONTEND_PORT:-4200}:80"
+    networks:
+      - stb-network
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: stb-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    depends_on:
+      - backend
+    networks:
+      - stb-network
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: stb-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - stb-network

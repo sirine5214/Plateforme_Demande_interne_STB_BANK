@@ -1,0 +1,67 @@
+# Infra CI locale (Jenkins + SonarQube), séparée de la stack applicative (docker-compose.yml
+# à la racine). Usage :
+#   cd devops/jenkins && docker compose -f docker-compose.ci.yml up -d
+#
+# Jenkins a besoin de lancer `docker build` pendant le pipeline : le socket Docker de l'hôte
+# est monté dans le conteneur (Docker-outside-of-Docker). Sous Windows, Docker Desktop expose
+# ce socket automatiquement aux conteneurs Linux.
+
+networks:
+  ci-network:
+    driver: bridge
+
+volumes:
+  jenkins-data:
+  sonarqube-data:
+  sonarqube-extensions:
+  sonarqube-logs:
+  sonarqube-db-data:
+
+services:
+  jenkins:
+    image: jenkins/jenkins:lts-jdk21
+    container_name: stb-jenkins
+    restart: unless-stopped
+    user: root # requis pour utiliser le socket Docker monté ci-dessous
+    ports:
+      - "8081:8080" # UI Jenkins (8080 est déjà pris par le backend Spring Boot)
+      - "50000:50000" # agents Jenkins distants
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      JAVA_OPTS: "-Djenkins.install.runSetupWizard=true"
+    networks:
+      - ci-network
+
+  sonarqube-db:
+    image: postgres:16-alpine
+    container_name: stb-sonarqube-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sonar
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: sonar
+    volumes:
+      - sonarqube-db-data:/var/lib/postgresql/data
+    networks:
+      - ci-network
+
+  sonarqube:
+    image: sonarqube:10-community
+    container_name: stb-sonarqube
+    restart: unless-stopped
+    depends_on:
+      - sonarqube-db
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://sonarqube-db:5432/sonar
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: sonar
+    ports:
+      - "9000:9000"
+    volumes:
+      - sonarqube-data:/opt/sonarqube/data
+      - sonarqube-extensions:/opt/sonarqube/extensions
+      - sonarqube-logs:/opt/sonarqube/logs
+    networks:
+      - ci-network
