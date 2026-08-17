@@ -41,7 +41,11 @@ pipeline {
         BACKEND_DIR         = 'Back_office'
         FRONTEND_DIR        = 'Front_office/template_STB/angular'
         K8S_DIR             = 'k8s'
-        SONAR_HOST_URL      = 'http://sonarqube:9000'
+        // Le service SonarQube réellement en place n'est pas celui de
+        // devops/jenkins/docker-compose.ci.yml (non utilisé) mais un conteneur
+        // autonome nommé "jenkins-sonarqube", sur le réseau Docker "jenkins-network"
+        // partagé avec ce conteneur Jenkins (résolution par nom de conteneur).
+        SONAR_HOST_URL      = 'http://jenkins-sonarqube:9000'
     }
 
     stages {
