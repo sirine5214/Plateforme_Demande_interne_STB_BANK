@@ -39,24 +39,26 @@
     </div>
 
     <div class="d-flex align-items-center gap-2 flex-wrap">
-      <select class="form-control stb-filter" [value]="filtreStatut()" (change)="onStatutFiltreChange($any($event.target).value)">
-        <option value="">Tous les statuts</option>
+      <!-- La sélection est portée par les <option> : un [value] sur le <select> serait appliqué
+           avant que @for n'ait créé les options, et le filtre venu de l'URL resterait invisible. -->
+      <select class="form-control stb-filter" (change)="onStatutFiltreChange($any($event.target).value)">
+        <option value="" [selected]="filtreStatut() === ''">Tous les statuts</option>
         @for (statut of statutOptions; track statut) {
-        <option [value]="statut">{{ statutLabels[statut] }}</option>
+        <option [value]="statut" [selected]="filtreStatut() === statut">{{ statutLabels[statut] }}</option>
         }
       </select>
 
-      <select class="form-control stb-filter" [value]="filtrePriorite()" (change)="onPrioriteFiltreChange($any($event.target).value)">
-        <option value="">Toutes les priorités</option>
+      <select class="form-control stb-filter" (change)="onPrioriteFiltreChange($any($event.target).value)">
+        <option value="" [selected]="filtrePriorite() === ''">Toutes les priorités</option>
         @for (priorite of prioriteOptions; track priorite) {
-        <option [value]="priorite">{{ prioriteLabels[priorite] }}</option>
+        <option [value]="priorite" [selected]="filtrePriorite() === priorite">{{ prioriteLabels[priorite] }}</option>
         }
       </select>
 
-      <select class="form-control stb-filter" [value]="filtreType()" (change)="onTypeFiltreChange($any($event.target).value)">
-        <option value="">Tous les types</option>
+      <select class="form-control stb-filter" (change)="onTypeFiltreChange($any($event.target).value)">
+        <option value="" [selected]="filtreType() === ''">Tous les types</option>
         @for (type of typeOptions; track type) {
-        <option [value]="type">{{ typeLabels[type] }}</option>
+        <option [value]="type" [selected]="filtreType() === type">{{ typeLabels[type] }}</option>
         }
       </select>
 
@@ -137,16 +139,16 @@
             <td class="text-muted">{{ demande.demandeurNom }}</td>
             }
             <td>
-              @if (estChef()) {
+              <!-- Une demande clôturée n'est plus réaffectable : le serveur répondrait 409. -->
+              @if (estChef() && !estCloturee(demande)) {
               <select
                 class="form-control form-control-sm stb-inline-select"
-                [value]="demande.responsableId ?? ''"
                 [disabled]="busyId() === demande.id"
                 (change)="affecter(demande, $any($event.target).value)"
               >
-                <option value="">Non affectée</option>
+                <option value="" [selected]="!demande.responsableId">Non affectée</option>
                 @for (user of affectables(); track user.id) {
-                <option [value]="user.id">{{ user.nom }}</option>
+                <option [value]="user.id" [selected]="demande.responsableId === user.id">{{ user.nom }}</option>
                 }
               </select>
               } @else {

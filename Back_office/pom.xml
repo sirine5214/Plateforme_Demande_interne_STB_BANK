@@ -106,6 +106,13 @@
             <artifactId>spring-boot-starter-webmvc-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Déclaré explicitement (même s'il vient déjà de starter-test) pour que la
+             propriété ${org.mockito:mockito-core:jar} soit résolue par Maven ci-dessous. -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -142,6 +149,31 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <!-- Définit la propriété ${org.mockito:mockito-core:jar}, qui pointe vers le jar
+                 dans le dépôt local. Sans ce plugin, Maven laisse le texte tel quel. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.8.1</version>
+                <executions>
+                    <execution>
+                        <id>proprietes-dependances</id>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Mockito est chargé comme agent au démarrage de la JVM de test : sans cela il
+                 s'auto-attache, ce que les futurs JDK interdiront. -Xshare:off supprime
+                 l'avertissement « Sharing is only supported for boot loader classes ». -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>-javaagent:${org.mockito:mockito-core:jar} -Xshare:off</argLine>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

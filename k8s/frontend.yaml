@@ -30,7 +30,7 @@ spec:
       containers:
         - name: frontend
           # Remplacé au déploiement par le Jenkinsfile : kubectl set image deployment/frontend frontend=<image>:<tag>
-          image: sirine5214/stb-front-office:latest
+          image: sirinebb/stb-front-office:latest
           ports:
             - containerPort: 80
           env:

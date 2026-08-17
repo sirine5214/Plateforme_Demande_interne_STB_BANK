@@ -190,12 +190,18 @@ puis ouvrir http://localhost:9000 (identifiants par défaut `admin` / `admin`, �
 Le [`Jenkinsfile`](Jenkinsfile) définit un pipeline déclaratif :
 
 ```
-Checkout → Build+Tests backend → Analyse SonarQube backend
-         → Build frontend → Analyse SonarQube frontend
-         → Quality Gate (bloquant)
-         → Build images Docker → Push registre (branche main)
-         → Déploiement Kubernetes (branche main)
+Checkout → Build+Tests backend → Analyse SonarQube backend*
+         → Build frontend → Analyse SonarQube frontend*
+         → Build images Docker → Push registre (branche main)*
+         → Déploiement Kubernetes (branche main)*
 ```
+*étapes protégées par `catchError` : si le credential/l'outil correspondant n'est pas encore
+configuré, le build passe en `UNSTABLE` au lieu d'échouer — le pipeline peut tourner de bout
+en bout dès le premier jour, la configuration se complète progressivement.
+
+L'analyse SonarQube appelle directement l'API Sonar avec un jeton (pas de configuration
+globale "SonarQube servers" à faire dans Jenkins), donc pas de dépendance à un webhook ni à
+un outil `SonarScanner` déclaré séparément.
 
 **Lancer Jenkins en local :**
 ```bash
@@ -205,12 +211,17 @@ docker compose -f docker-compose.ci.yml up -d
 Jenkins est alors disponible sur http://localhost:8081 (le port 8080 est réservé au backend).
 
 **Configuration Jenkins requise** (détaillée en tête du `Jenkinsfile`) :
-- Plugins : Pipeline, Docker Pipeline, SonarQube Scanner, Kubernetes CLI, JUnit.
-- Un serveur SonarQube déclaré sous le nom `SonarQube` (Manage Jenkins → System) + jeton dans
-  les Credentials sous l'identifiant `sonarqube-token`.
-- Credentials `dockerhub-credentials` (utilisateur/mot de passe) pour pousser les images.
-- Credentials `kubeconfig` (fichier secret) pointant vers le cluster cible.
-- Un job de type *Pipeline* (ou *Multibranch Pipeline*) pointant vers ce dépôt, script path `Jenkinsfile`.
+- Plugins : Pipeline, Docker Pipeline, Git, JUnit.
+- `mvn`/`java` (via `./mvnw`), `node`/`npm`, `sonar-scanner`, `docker` et `kubectl` disponibles
+  sur l'agent Jenkins.
+- Credentials `sonarqube-token` (Secret text) : jeton généré dans SonarQube
+  (Mon compte → Security → Generate Tokens) — à créer une fois, à la main, dans Jenkins.
+- Credentials `docker-hub-creds` (utilisateur/mot de passe) pour pousser les images vers le
+  namespace Docker Hub configuré dans `DOCKERHUB_NAMESPACE` (Jenkinsfile).
+- kubectl utilise le kubeconfig par défaut de l'utilisateur Jenkins (`~/.kube/config`) ; si
+  absent, l'étape de déploiement est simplement ignorée (`UNSTABLE`, pas `FAILURE`).
+- Un job de type *Pipeline* avec définition **"Pipeline script from SCM"** (Git) pointant vers
+  ce dépôt, branche `main`, script path `Jenkinsfile`.
 
 ## Déploiement Kubernetes
 

@@ -48,7 +48,7 @@ spec:
       containers:
         - name: backend
           # Remplacé au déploiement par le Jenkinsfile : kubectl set image deployment/backend backend=<image>:<tag>
-          image: sirine5214/stb-back-office:latest
+          image: sirinebb/stb-back-office:latest
           ports:
             - containerPort: 8080
           envFrom:

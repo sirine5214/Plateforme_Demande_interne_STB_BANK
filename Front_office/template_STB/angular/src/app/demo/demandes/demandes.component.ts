@@ -122,12 +122,17 @@ export class DemandesComponent implements OnInit {
     return 'Suivi des demandes';
   });
 
+  /** Une demande clôturée est figée : le serveur refuse toute réaffectation. */
+  estCloturee(demande: Demande): boolean {
+    return demande.statut === 'TERMINEE' || demande.statut === 'REJETEE';
+  }
+
   /**
    * Statuts proposés pour une demande donnée : croisement du cycle de vie
    * (transitions autorisées depuis son statut courant) et des droits du rôle.
    */
   statutsProposes(demande: Demande): StatutDemande[] {
-    if (demande.statut === 'TERMINEE' || demande.statut === 'REJETEE') {
+    if (this.estCloturee(demande)) {
       return [];
     }
 
