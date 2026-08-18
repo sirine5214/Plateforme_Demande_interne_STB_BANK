@@ -91,12 +91,22 @@
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
-        <!-- Base H2 en mémoire pour les tests @SpringBootTest (contextLoads) : évite de
-             dépendre d'un Postgres accessible depuis l'agent Jenkins/CI, contrairement au
-             Postgres de dev sur localhost:5434 (voir src/test/resources/application.properties). -->
+        <!-- Testcontainers PostgreSQL pour les tests @SpringBootTest (contextLoads) : démarre
+             un vrai conteneur Postgres jetable via le socket Docker, sans dépendre d'un
+             Postgres externe accessible depuis l'agent Jenkins (voir TestcontainersConfiguration). -->
         <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
