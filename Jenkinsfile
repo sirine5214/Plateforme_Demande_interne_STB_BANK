@@ -41,6 +41,13 @@ pipeline {
         BACKEND_DIR         = 'Back_office'
         FRONTEND_DIR        = 'Front_office/template_STB/angular'
         K8S_DIR             = 'k8s'
+        // Le client Docker embarqué dans Testcontainers (docker-java, via testcontainers-bom
+        // 1.20.4) échoue sa négociation automatique de version d'API contre ce démon Docker
+        // (Server API 1.52) : il envoie un premier appel en API 1.32, que ce démon rejette
+        // ("Minimum supported API version is 1.44"). Fixer la version cible explicitement
+        // court-circuite cette négociation cassée. À utiliser aussi par tout `docker` CLI
+        // appelé dans ce pipeline (Build/Push Images), qui respecte la même variable.
+        DOCKER_API_VERSION  = '1.52'
         // Le service SonarQube réellement en place n'est pas celui de
         // devops/jenkins/docker-compose.ci.yml (non utilisé) mais un conteneur
         // autonome nommé "jenkins-sonarqube", sur le réseau Docker "jenkins-network"
