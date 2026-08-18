@@ -91,6 +91,14 @@
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <!-- Base H2 en mémoire pour les tests @SpringBootTest (contextLoads) : évite de
+             dépendre d'un Postgres accessible depuis l'agent Jenkins/CI, contrairement au
+             Postgres de dev sur localhost:5434 (voir src/test/resources/application.properties). -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
