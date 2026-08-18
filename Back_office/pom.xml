@@ -167,12 +167,16 @@
             </plugin>
             <!-- Mockito est chargé comme agent au démarrage de la JVM de test : sans cela il
                  s'auto-attache, ce que les futurs JDK interdiront. -Xshare:off supprime
-                 l'avertissement « Sharing is only supported for boot loader classes ». -->
+                 l'avertissement « Sharing is only supported for boot loader classes ».
+                 @{argLine} (et non ${argLine}) reprend la valeur injectée par
+                 jacoco:prepare-agent au lieu de l'écraser - sans ça, aucune couverture
+                 n'est enregistrée ("Skipping JaCoCo execution due to missing execution
+                 data file"). -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <argLine>-javaagent:${org.mockito:mockito-core:jar} -Xshare:off</argLine>
+                    <argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar} -Xshare:off</argLine>
                 </configuration>
             </plugin>
             <plugin>

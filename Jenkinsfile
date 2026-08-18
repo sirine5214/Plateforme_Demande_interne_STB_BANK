@@ -83,7 +83,7 @@ pipeline {
                         withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
                             sh '''
                                 chmod +x ./mvnw
-                                ./mvnw -B sonar:sonar \
+                                ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
                                   -Dsonar.projectKey=stb-bank-back-office \
                                   -Dsonar.projectName="STB Bank - Back Office" \
                                   -Dsonar.host.url=${SONAR_HOST_URL} \
