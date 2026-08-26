@@ -60,6 +60,28 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+                /*
+                 * BRANCH_NAME n'existe que dans un job Multibranch Pipeline. Ce job est un
+                 * Pipeline simple « script from SCM » : la directive « when { branch 'main' } »
+                 * y compare donc toujours une valeur nulle et saute l'etape en silence, ce qui
+                 * a rendu Push Images et Deploy: Kubernetes inatteignables depuis le debut.
+                 * On resout la branche nous-memes : BRANCH_NAME s'il existe (multibranch),
+                 * sinon GIT_BRANCH pose par le plugin Git (de la forme « origin/main »),
+                 * sinon le nom lu dans le depot.
+                 */
+                script {
+                    def branche = env.BRANCH_NAME ?: ''
+                    if (!branche) {
+                        branche = (env.GIT_BRANCH ?: '').replaceFirst(/^origin\//, '')
+                    }
+                    if (!branche || branche == 'HEAD') {
+                        branche = sh(returnStdout: true, script: 'git rev-parse --abbrev-ref HEAD').trim()
+                    }
+                    env.BRANCHE_COURANTE = branche
+                    env.EST_MAIN = (branche == 'main') ? 'true' : 'false'
+                    echo "Branche construite : ${branche} - publication et deploiement " +
+                         (env.EST_MAIN == 'true' ? 'actifs' : 'sautes (branche != main)')
+                }
             }
         }
 
@@ -201,7 +223,7 @@ pipeline {
         }
 
         stage('Docker: Push Images') {
-            when { branch 'main' }
+            when { expression { env.EST_MAIN == 'true' } }
             steps {
                 catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
                     withCredentials([usernamePassword(credentialsId: 'docker-hub-creds',
@@ -221,13 +243,22 @@ pipeline {
         }
 
         stage('Deploy: Kubernetes') {
-            when { branch 'main' }
+            when { expression { env.EST_MAIN == 'true' } }
             steps {
                 catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
                     sh '''
                         kubectl cluster-info --request-timeout=5s
                         kubectl apply -f ${K8S_DIR}/namespace.yaml
-                        kubectl apply -f ${K8S_DIR}/ -n stb-bank
+                        # Les manifestes sont listes un par un, jamais « apply -f ${K8S_DIR}/ » :
+                        # le repertoire contient secret.example.yaml, un gabarit dont les valeurs
+                        # sont « change-me ». Comme le vrai secret.yaml est dans .gitignore, il est
+                        # absent du workspace de l'agent : un apply du repertoire entier ecraserait
+                        # POSTGRES_PASSWORD et JWT_SECRET par les valeurs du gabarit. Le secret
+                        # stb-secrets se cree une fois, a la main, sur le cluster.
+                        kubectl apply -n stb-bank -f ${K8S_DIR}/postgres.yaml
+                        kubectl apply -n stb-bank -f ${K8S_DIR}/backend.yaml
+                        kubectl apply -n stb-bank -f ${K8S_DIR}/frontend.yaml
+                        kubectl apply -n stb-bank -f ${K8S_DIR}/ingress.yaml
                         kubectl set image deployment/backend backend=${BACKEND_IMAGE}:${IMAGE_TAG} -n stb-bank
                         kubectl set image deployment/frontend frontend=${FRONTEND_IMAGE}:${IMAGE_TAG} -n stb-bank
                         kubectl rollout status deployment/backend -n stb-bank --timeout=180s

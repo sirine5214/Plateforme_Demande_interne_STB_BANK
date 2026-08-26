@@ -318,6 +318,18 @@ Contenu de `k8s/` :
 Le déploiement continu (Jenkinsfile) applique ces manifestes puis fait un
 `kubectl set image` avec le tag de build, suivi d'un `kubectl rollout status`.
 
+Deux points sur cette étape :
+
+- Le pipeline applique les manifestes **un par un**, jamais `kubectl apply -f k8s/` : le
+  répertoire contient `secret.example.yaml`, un gabarit aux valeurs `change-me`, et le vrai
+  `secret.yaml` est dans `.gitignore` donc absent du workspace de l'agent. Le secret
+  `stb-secrets` se crée **une fois, à la main**, sur le cluster.
+- Les étapes *Push Images* et *Deploy: Kubernetes* ne s'exécutent que sur `main`. La branche
+  est résolue dans l'étape *Checkout* (`BRANCH_NAME` puis `GIT_BRANCH` puis le dépôt) et non
+  par `when { branch 'main' }` : cette directive ne lit que `BRANCH_NAME`, qu'un job Pipeline
+  simple « script from SCM » ne renseigne pas — les deux étapes étaient donc systématiquement
+  sautées.
+
 ## Supervision — Prometheus & Grafana
 
 Le backend expose ses métriques via Spring Boot Actuator + Micrometer sur `/actuator/prometheus`
