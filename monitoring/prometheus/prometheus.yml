@@ -11,3 +11,15 @@ scrape_configs:
     metrics_path: /actuator/prometheus
     static_configs:
       - targets: ["backend:8080"]
+
+  # Front-office : Nginx n'expose pas de metriques Prometheus nativement, c'est
+  # nginx-exporter qui lit son stub_status et les traduit sur son port 9113.
+  - job_name: stb-front-office
+    static_configs:
+      - targets: ["nginx-exporter:9113"]
+
+  # Grafana expose /metrics sans authentification : on supervise l'outil de supervision
+  # (temps de rendu des dashboards, erreurs de requetes vers les datasources).
+  - job_name: grafana
+    static_configs:
+      - targets: ["grafana:3000"]

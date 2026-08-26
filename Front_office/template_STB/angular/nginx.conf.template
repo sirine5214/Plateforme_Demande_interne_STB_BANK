@@ -14,6 +14,17 @@ server {
 
     location = /favicon.ico { access_log off; log_not_found off; }
 
+    # Compteurs internes de Nginx (connexions, requetes servies), lus par nginx-exporter
+    # qui les traduit en metriques Prometheus. Restreint au reseau Docker : l'exporter est
+    # le seul appelant legitime, et ces compteurs n'ont pas a etre exposes publiquement.
+    location = /nginx_status {
+        stub_status;
+        access_log off;
+        allow 172.16.0.0/12;
+        allow 127.0.0.1;
+        deny all;
+    }
+
     # API REST du Back_office
     location /api/ {
         proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/api/;

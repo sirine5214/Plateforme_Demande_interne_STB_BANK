@@ -53,6 +53,13 @@ export const AdminNavigationItems: NavigationItem[] = [
     icon: 'icon-group',
     children: [
       {
+        id: 'admin-emails',
+        title: 'Boîte de réception',
+        type: 'item',
+        url: '/emails',
+        icon: 'feather icon-inbox'
+      },
+      {
         id: 'admin-demandes',
         title: 'Toutes les demandes',
         type: 'item',
@@ -243,6 +250,13 @@ export const ChefProjetNavigationItems: NavigationItem[] = [
     type: 'group',
     icon: 'icon-group',
     children: [
+      {
+        id: 'chef-emails',
+        title: 'Boîte de réception',
+        type: 'item',
+        url: '/emails',
+        icon: 'feather icon-inbox'
+      },
       {
         id: 'demandes-a-affecter',
         title: 'À affecter',

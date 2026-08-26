@@ -392,33 +392,65 @@
       @if (messagesLoading()) {
       <p class="text-muted small mb-0">Chargement de la conversation...</p>
       } @else {
-      <div class="stb-fil">
-        @for (message of messages(); track message.id) {
-        <div class="stb-fil__ligne" [class.stb-fil__ligne--moi]="estMonMessage(message)">
-          <img [src]="avatarMessage(message)" class="stb-fil__avatar" alt="" />
+      <div class="stb-fil" #filDiscussion>
+        @for (bloc of filGroupe(); track bloc.cle) {
+        <div class="stb-fil__jour"><span>{{ bloc.libelle }}</span></div>
+
+        @for (ligne of bloc.messages; track ligne.message.id) {
+        <div class="stb-fil__ligne" [class.stb-fil__ligne--moi]="ligne.moi" [class.stb-fil__ligne--suite]="!ligne.avecAvatar">
+          <!-- L'avatar n'est rendu qu'en tete de serie ; sinon un espaceur garde l'alignement -->
+          @if (ligne.avecAvatar) {
+          <img [src]="avatarMessage(ligne.message)" class="stb-fil__avatar" alt="" />
+          } @else {
+          <span class="stb-fil__avatar stb-fil__avatar--vide"></span>
+          }
           <div class="stb-fil__bulle">
-            <div class="stb-fil__auteur">{{ estMonMessage(message) ? 'Vous' : message.expediteurNom }}</div>
-            <div class="stb-fil__texte">{{ message.contenu }}</div>
-            <div class="stb-fil__heure">{{ message.dateEnvoi | date: 'dd/MM HH:mm' }}</div>
+            @if (ligne.avecAvatar) {
+            <div class="stb-fil__auteur">{{ ligne.moi ? 'Vous' : ligne.message.expediteurNom }}</div>
+            }
+            <div class="stb-fil__texte">{{ ligne.message.contenu }}</div>
+            <div class="stb-fil__heure">
+              {{ ligne.message.dateEnvoi | date: 'HH:mm' }}
+              @if (ligne.moi) {
+              <i class="feather stb-fil__lu" [class.icon-check]="!ligne.message.lu" [class.icon-check-circle]="ligne.message.lu"
+                 [class.stb-fil__lu--vu]="ligne.message.lu"
+                 [title]="ligne.message.lu ? 'Lu par votre correspondant' : 'Envoyé'"></i>
+              }
+            </div>
           </div>
         </div>
+        }
         } @empty {
-        <p class="text-muted small mb-0">Aucun message. Démarrez la conversation ci-dessous.</p>
+        <div class="stb-fil__vide">
+          <i class="feather icon-message-circle"></i>
+          <p class="mb-0">Aucun message pour l'instant.</p>
+          <small class="text-muted">Posez une question ou précisez le besoin ci-dessous.</small>
+        </div>
         }
       </div>
 
       <div class="stb-fil__saisie">
-        <input
-          type="text"
+        <!-- Entrée envoie, Maj+Entrée passe à la ligne : les précisions techniques
+             tiennent rarement sur une seule ligne. -->
+        <textarea
           class="form-control"
           name="messageEnCours"
-          placeholder="Écrire un message..."
+          rows="1"
+          placeholder="Écrire un message... (Maj+Entrée pour aller à la ligne)"
           [(ngModel)]="messageEnCours"
           [disabled]="envoiMessage()"
           (keydown.enter)="$event.preventDefault(); envoyerMessage()"
-        />
-        <button type="button" class="btn btn-primary" [disabled]="envoiMessage() || !messageEnCours.trim()" (click)="envoyerMessage()">
-          <i class="feather icon-send"></i>
+          (keydown.shift.enter)="$event.stopPropagation()"
+        ></textarea>
+        <button
+          type="button"
+          class="btn btn-primary"
+          title="Envoyer le message"
+          aria-label="Envoyer le message"
+          [disabled]="envoiMessage() || !messageEnCours.trim()"
+          (click)="envoyerMessage()"
+        >
+          <i class="feather icon-navigation-2"></i>
         </button>
       </div>
       }

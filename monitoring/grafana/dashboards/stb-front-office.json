@@ -1,0 +1,402 @@
+{
+  "title": "STB Bank - Front Office (Nginx)",
+  "uid": "stb-front-office",
+  "tags": ["stb", "front-office", "nginx"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 1,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Vue d'ensemble",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 2,
+      "title": "Statut Nginx",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "description": "L'exporter arrive-t-il a lire /nginx_status sur le conteneur stb-frontend ?",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "targets": [{ "refId": "A", "expr": "nginx_up{job=\"stb-front-office\"}" }],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "DOWN",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": { "text": "HORS SERVICE", "color": "red", "index": 0 },
+                "1": { "text": "EN LIGNE", "color": "green", "index": 1 }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "title": "Debit",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "description": "Requetes HTTP servies par Nginx : pages Angular, assets statiques, et proxy vers /api/.",
+      "gridPos": { "h": 4, "w": 5, "x": 4, "y": 1 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(nginx_http_requests_total{job=\"stb-front-office\"}[$__rate_interval]))"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 2,
+          "noValue": "0",
+          "color": { "mode": "fixed", "fixedColor": "blue" }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "title": "Connexions actives",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "description": "Connexions client ouvertes a cet instant (en lecture, en ecriture, ou en attente).",
+      "gridPos": { "h": 4, "w": 5, "x": 9, "y": 1 },
+      "targets": [{ "refId": "A", "expr": "nginx_connections_active{job=\"stb-front-office\"}" }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "color": { "mode": "fixed", "fixedColor": "purple" }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "title": "Connexions refusees",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "description": "Acceptees moins traitees. Doit valoir 0 en permanence : toute valeur positive signifie que Nginx a laisse tomber des connexions faute de ressources (worker_connections, descripteurs de fichiers).",
+      "gridPos": { "h": 4, "w": 5, "x": 14, "y": 1 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(nginx_connections_accepted{job=\"stb-front-office\"}[$__rate_interval]) - rate(nginx_connections_handled{job=\"stb-front-office\"}[$__rate_interval])"
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 2,
+          "noValue": "0",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 0.001 }]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "title": "Requetes par connexion",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "description": "Efficacite du keep-alive : combien de requetes en moyenne par connexion TCP. Proche de 1 = chaque requete rouvre une connexion, ce qui coute cher en handshakes.",
+      "gridPos": { "h": 4, "w": 5, "x": 19, "y": 1 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(nginx_http_requests_total{job=\"stb-front-office\"}[$__rate_interval])) / sum(rate(nginx_connections_handled{job=\"stb-front-office\"}[$__rate_interval]))"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "noValue": "0",
+          "color": { "mode": "fixed", "fixedColor": "text" }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "title": "Disponibilite dans le temps",
+      "type": "state-timeline",
+      "datasource": "Prometheus",
+      "description": "Frise des interruptions du front-office.",
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 5 },
+      "targets": [{ "refId": "A", "expr": "nginx_up{job=\"stb-front-office\"}", "legendFormat": "front-office" }],
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "rowHeight": 0.9,
+        "alignValue": "center",
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": { "text": "hors service", "color": "red", "index": 0 },
+                "1": { "text": "en ligne", "color": "green", "index": 1 }
+              }
+            }
+          ],
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }]
+          },
+          "custom": { "lineWidth": 0, "fillOpacity": 90 }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Trafic",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 9,
+      "title": "Debit de requetes",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "description": "stub_status ne distingue pas les URI : c'est le total servi par Nginx, toutes routes confondues.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(nginx_http_requests_total{job=\"stb-front-office\"}[$__rate_interval]))",
+          "legendFormat": "requetes/s"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 30,
+            "gradientMode": "opacity",
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 10,
+      "title": "Front vs Back : ou part le trafic",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "description": "Nginx sert le total ; Spring Boot ne voit que ce qui est relaye vers /api/, /uploads/ et /ws/. L'ecart entre les deux courbes, c'est le statique (JS, CSS, images) servi sans jamais toucher le backend.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(nginx_http_requests_total{job=\"stb-front-office\"}[$__rate_interval]))",
+          "legendFormat": "front-office (Nginx, total)"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"stb-back-office\"}[$__rate_interval]))",
+          "legendFormat": "back-office (Spring Boot)"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["mean", "max", "lastNotNull"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "gradientMode": "opacity",
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "front-office (Nginx, total)" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "back-office (Spring Boot)" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 11,
+      "type": "row",
+      "title": "Connexions",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 12,
+      "title": "Etat des connexions",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "description": "En lecture = Nginx recoit la requete. En ecriture = il renvoie la reponse. En attente = connexion keep-alive inactive, prete a resservir. Beaucoup d'ecritures simultanees signale des reponses lentes.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 19 },
+      "targets": [
+        { "refId": "A", "expr": "nginx_connections_reading{job=\"stb-front-office\"}", "legendFormat": "en lecture" },
+        { "refId": "B", "expr": "nginx_connections_writing{job=\"stb-front-office\"}", "legendFormat": "en ecriture" },
+        { "refId": "C", "expr": "nginx_connections_waiting{job=\"stb-front-office\"}", "legendFormat": "en attente (keep-alive)" }
+      ],
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "showLegend": true, "calcs": ["mean", "max", "lastNotNull"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "fillOpacity": 45,
+            "showPoints": "never",
+            "stacking": { "mode": "normal", "group": "A" }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "en lecture" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "en ecriture" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "en attente (keep-alive)" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 13,
+      "title": "Connexions acceptees vs traitees",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "description": "Les deux courbes doivent se superposer parfaitement. Si 'acceptees' passe au-dessus de 'traitees', Nginx laisse tomber des connexions.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 19 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(nginx_connections_accepted{job=\"stb-front-office\"}[$__rate_interval])",
+          "legendFormat": "acceptees/s"
+        },
+        {
+          "refId": "B",
+          "expr": "rate(nginx_connections_handled{job=\"stb-front-office\"}[$__rate_interval])",
+          "legendFormat": "traitees/s"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 2,
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "traitees/s" },
+            "properties": [
+              { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [6, 6] } },
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "acceptees/s" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }]
+          }
+        ]
+      }
+    }
+  ]
+}

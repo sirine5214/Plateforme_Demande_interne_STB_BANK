@@ -28,6 +28,9 @@ public class FileStorageService {
     @Value("${app.attachments-dir:uploads/demandes}")
     private String attachmentsDir;
 
+    @Value("${app.email-attachments-dir:uploads/emails}")
+    private String emailAttachmentsDir;
+
     /** Taille maximale d'un avatar : inutile de conserver une photo pleine résolution. */
     private static final int TAILLE_AVATAR_PX = 256;
 
@@ -67,6 +70,31 @@ public class FileStorageService {
     /** Enregistre une pièce jointe de demande et renvoie son URL publique. */
     public String storeAttachment(MultipartFile file) {
         return store(file, attachmentsDir, "/uploads/demandes/");
+    }
+
+    /**
+     * Enregistre une piece jointe issue d'un e-mail entrant.
+     *
+     * <p>Stockee a part des pieces jointes de demandes : elle provient d'un expediteur non
+     * authentifie et ne doit pas se melanger aux fichiers deposes depuis l'application. Le
+     * nom d'origine n'est jamais repris comme nom de fichier, seule son extension l'est, afin
+     * qu'un nom construit par un attaquant ne puisse pas influencer le chemin ecrit.
+     *
+     * @return l'URL publique du fichier enregistre
+     */
+    public String storeEmailAttachment(byte[] contenu, String nomFichierOrigine) {
+        try {
+            Path dir = Paths.get(emailAttachmentsDir);
+            Files.createDirectories(dir);
+
+            String filename = UUID.randomUUID() + extensionOf(nomFichierOrigine);
+            Files.write(dir.resolve(filename), contenu);
+
+            return "/uploads/emails/" + filename;
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "Erreur lors de l'enregistrement de la piece jointe d'e-mail", e);
+        }
     }
 
     private String store(MultipartFile file, String directory, String urlPrefix) {

@@ -200,10 +200,57 @@
 
 // ---- Fil de discussion ----
 .stb-fil {
-  max-height: 260px;
-  overflow-y: auto;
-  padding: 0.5rem 0.25rem;
+  background: #fbfcfd;
+  border: 1px solid #edf0f3;
+  border-radius: 10px;
   margin-bottom: 0.75rem;
+  max-height: 380px;
+  overflow-y: auto;
+  padding: 0.85rem;
+  // Le defilement s'ancre en bas : a l'arrivee d'un message, la vue suit la conversation
+  // au lieu de rester figee sur l'historique.
+  scroll-behavior: smooth;
+
+  // ---- Separateur de journee ----
+  &__jour {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+    margin: 0.5rem 0 1rem;
+
+    // Les deux filets sont dessines par les pseudo-elements, ce qui centre le libelle
+    // quelle que soit sa longueur.
+    &::before,
+    &::after {
+      background: #e4e9ee;
+      content: '';
+      flex: 1;
+      height: 1px;
+    }
+
+    span {
+      color: #a8b1bb;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+  }
+
+  &__vide {
+    color: #8a94a0;
+    padding: 2rem 1rem;
+    text-align: center;
+
+    i {
+      color: #d7dde4;
+      font-size: 36px;
+    }
+
+    p {
+      margin-top: 0.6rem;
+    }
+  }
 
   &__ligne {
     display: flex;
@@ -211,14 +258,22 @@
     gap: 0.6rem;
     margin-bottom: 0.85rem;
 
+    // Suite d'un meme auteur : bulles resserrees, l'oeil percoit un seul bloc de parole.
+    &--suite {
+      margin-bottom: 0.2rem;
+    }
+
     // Mes propres messages sont alignés à droite
     &--moi {
       flex-direction: row-reverse;
 
       .stb-fil__bulle {
-        background: rgba(0, 128, 201, 0.12);
-        border-bottom-right-radius: 4px;
+        background: rgba(0, 128, 201, 0.1);
         border-bottom-left-radius: 14px;
+        border-bottom-right-radius: 4px;
+        // Bordure teintee assortie au fond : sans elle, le liseré gris des bulles
+        // recues resterait visible et brouillerait la distinction emetteur/destinataire.
+        border-color: rgba(0, 128, 201, 0.2);
       }
 
       .stb-fil__auteur,
@@ -234,13 +289,21 @@
     border-radius: 50%;
     object-fit: cover;
     flex: 0 0 32px;
+
+    // Occupe la place de l'avatar absent pour que les bulles d'une meme serie
+    // restent alignees sur la meme verticale.
+    &--vide {
+      visibility: hidden;
+    }
   }
 
   &__bulle {
+    background: #fff;
+    border: 1px solid #edf0f3;
+    border-radius: 14px 14px 14px 4px;
+    box-shadow: 0 1px 2px rgba(13, 13, 13, 0.04);
     max-width: 75%;
     padding: 0.6rem 0.85rem;
-    border-radius: 14px 14px 14px 4px;
-    background: #f1f4f7;
   }
 
   &__auteur {
@@ -259,8 +322,20 @@
 
   &__heure {
     font-size: 10px;
+    align-items: center;
     color: #a8b1bb;
+    display: flex;
+    gap: 0.3rem;
     margin-top: 0.2rem;
+  }
+
+  &__lu {
+    font-size: 12px;
+
+    // Vert uniquement lorsque le correspondant a reellement ouvert le fil.
+    &--vu {
+      color: #4caf50;
+    }
   }
 
   &__saisie {
@@ -269,11 +344,26 @@
 
     .form-control {
       border-radius: 8px;
+      max-height: 120px;
+      min-height: 42px;
+      padding-top: 0.6rem;
+      resize: vertical;
     }
 
     .btn {
-      flex: 0 0 auto;
+      align-items: center;
       border-radius: 8px;
+      display: flex;
+      flex: 0 0 auto;
+      justify-content: center;
+      min-width: 46px;
+
+      i {
+        font-size: 16px;
+        // navigation-2 pointe vers le haut : la rotation le fait lire comme un envoi
+        // plutot que comme une direction cardinale.
+        transform: rotate(45deg);
+      }
     }
   }
 }
@@ -414,5 +504,38 @@
   &--rejetee {
     background: rgba(217, 83, 79, 0.15);
     color: #c0392b;
+  }
+}
+
+// ---- Bandeau d'appel a l'action (boite de reception) ----
+.stb-rappel {
+  align-items: center;
+  background: rgba(70, 128, 255, 0.08);
+  border: 1px solid rgba(70, 128, 255, 0.2);
+  border-radius: 10px;
+  display: flex;
+  gap: 0.85rem;
+  margin-bottom: 1.25rem;
+  padding: 0.85rem 1rem;
+
+  > i {
+    color: #4680ff;
+    font-size: 22px;
+  }
+
+  &__texte {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+
+    strong {
+      color: #262b31;
+      font-size: 14px;
+    }
+
+    span {
+      color: #6c7784;
+      font-size: 12.5px;
+    }
   }
 }

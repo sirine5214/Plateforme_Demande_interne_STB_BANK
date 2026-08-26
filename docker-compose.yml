@@ -40,6 +40,10 @@ services:
       postgres:
         condition: service_healthy
     environment:
+      # Surcharge le 8082 par defaut d'application.properties : dans le conteneur l'application
+      # doit ecouter sur 8080, port attendu par le mapping ci-dessous, par le HEALTHCHECK du
+      # Dockerfile et par la cible Prometheus « backend:8080 ».
+      SERVER_PORT: 8080
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB:-stb_bank}
@@ -47,6 +51,15 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
       JWT_SECRET: ${JWT_SECRET:-change-me-generate-a-long-random-base64-string}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      # Boite partagee des demandes internes. Reste sur « fake » (boite en memoire) tant
+      # qu'aucun serveur n'est fourni : basculer MAIL_CLIENT=imap dans .env pour activer la
+      # releve reelle contre le service greenmail ci-dessous.
+      MAIL_CLIENT: ${MAIL_CLIENT:-fake}
+      MAIL_HOST: ${MAIL_HOST:-greenmail}
+      MAIL_PORT: ${MAIL_PORT:-3143}
+      MAIL_PROTOCOL: ${MAIL_PROTOCOL:-imap}
+      MAIL_USERNAME: ${MAIL_USERNAME:-demandes@stb.com.tn}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-demandes}
     volumes:
       - backend-uploads:/app/uploads
     ports:
@@ -66,8 +79,55 @@ services:
     environment:
       BACKEND_HOST: backend
       BACKEND_PORT: 8080
+    volumes:
+      # Le template est deja COPY dans l'image ; le monter par-dessus evite de rebatir tout
+      # le bundle Angular (npm ci + ng build) juste pour toucher une regle Nginx :
+      # « docker compose restart frontend » suffit, l'entrypoint re-substitue les variables.
+      - ./Front_office/template_STB/angular/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
     ports:
       - "${FRONTEND_PORT:-4200}:80"
+    networks:
+      - stb-network
+
+  # Traduit les compteurs stub_status de Nginx en metriques Prometheus. Sans lui le
+  # front-office est une boite noire : on ne saurait dire s'il sert des requetes ni combien.
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.3.0
+    container_name: stb-nginx-exporter
+    restart: unless-stopped
+    command:
+      - --nginx.scrape-uri=http://frontend:80/nginx_status
+    depends_on:
+      - frontend
+    networks:
+      - stb-network
+
+  # Serveur de messagerie de developpement, pour eprouver la releve de bout en bout.
+  # GreenMail plutot que Mailpit ou MailHog : ces deux derniers n'exposent que SMTP, alors
+  # que la plateforme releve la boite en IMAP. GreenMail est par ailleurs la meme brique que
+  # celle utilisable en test d'integration Java, ce qui evite d'avoir deux outils a maitriser.
+  #
+  # Sous profil « mail » : ne demarre pas avec la stack ordinaire, car il n'a d'interet que
+  # pour eprouver l'ingestion.
+  #   docker compose --profile mail up -d greenmail
+  greenmail:
+    image: greenmail/standalone:2.1.3
+    container_name: stb-greenmail
+    restart: unless-stopped
+    profiles:
+      - mail
+    environment:
+      # auth.disabled : n'importe quel couple identifiant/mot de passe est accepte et la
+      # boite correspondante est creee a la volee. Acceptable pour un serveur de test isole,
+      # jamais au-dela.
+      GREENMAIL_OPTS: >-
+        -Dgreenmail.setup.test.all
+        -Dgreenmail.hostname=0.0.0.0
+        -Dgreenmail.auth.disabled
+        -Dgreenmail.verbose
+    ports:
+      - "${GREENMAIL_SMTP_PORT:-3025}:3025"
+      - "${GREENMAIL_IMAP_PORT:-3143}:3143"
     networks:
       - stb-network
 

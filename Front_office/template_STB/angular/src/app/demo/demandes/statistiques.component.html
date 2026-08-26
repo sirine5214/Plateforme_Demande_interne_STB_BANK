@@ -13,6 +13,19 @@
 <div class="alert alert-danger" role="alert">{{ error() }}</div>
 }
 
+<!-- Passerelle vers la boite partagee : une demande arrivee par courriel n'existe pas
+     encore dans les statistiques, elle attend d'etre qualifiee. -->
+@if (estSuperviseur() && emailsNonTraites() > 0) {
+<div class="stb-rappel">
+  <i class="feather icon-inbox"></i>
+  <div class="stb-rappel__texte">
+    <strong>{{ emailsNonTraites() }} e-mail(s) en attente de qualification</strong>
+    <span>Ces demandes reçues par courriel ne sont pas encore comptabilisées ci-dessous.</span>
+  </div>
+  <a [routerLink]="['/emails']" class="btn btn-sm btn-primary">Ouvrir la boîte</a>
+</div>
+}
+
 @if (loading()) {
 <p class="text-muted">Chargement des statistiques...</p>
 } @else if (stats(); as s) {

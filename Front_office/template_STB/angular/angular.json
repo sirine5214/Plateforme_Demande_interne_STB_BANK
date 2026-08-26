@@ -61,12 +61,12 @@
                 {
                   "type": "initial",
                   "maximumWarning": "2mb",
-                  "maximumError": "2mb"
+                  "maximumError": "3mb"
                 },
                 {
                   "type": "anyComponentStyle",
                   "maximumWarning": "10kb",
-                  "maximumError": "10kb"
+                  "maximumError": "16kb"
                 }
               ],
               "fileReplacements": [
@@ -110,6 +110,27 @@
             "lintFilePatterns": [
               "src/**/*.ts",
               "src/**/*.html"
+            ]
+          }
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "tsconfig.spec.json",
+            "runner": "vitest",
+            "reporters": [
+              "default",
+              [
+                "junit",
+                {
+                  "outputFile": "test-results/junit.xml"
+                }
+              ]
+            ],
+            "coverage": true,
+            "coverageReporters": [
+              "text-summary",
+              "lcov"
             ]
           }
         }

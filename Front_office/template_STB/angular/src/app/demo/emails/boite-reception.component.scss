@@ -1,0 +1,388 @@
+@use '../../../scss/stb-admin-ui';
+
+// ---- Onglets de traitement ----
+.stb-onglets {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-bottom: 1px solid #edf0f3;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.stb-onglet {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #8a94a0;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0.65rem 1rem;
+  transition:
+    color 0.15s ease-in-out,
+    border-color 0.15s ease-in-out;
+
+  &:hover {
+    color: #4680ff;
+  }
+
+  &--actif {
+    border-bottom-color: #4680ff;
+    color: #4680ff;
+  }
+
+  &__pastille {
+    background: #ff5252;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 11px;
+    margin-left: 0.4rem;
+    padding: 0.1rem 0.45rem;
+  }
+}
+
+// ---- Liste des messages ----
+.stb-mails {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.stb-mail {
+  border: 1px solid #edf0f3;
+  border-radius: 10px;
+  overflow: hidden;
+  transition:
+    border-color 0.15s ease-in-out,
+    box-shadow 0.15s ease-in-out;
+
+  &:hover {
+    border-color: #d7dde4;
+  }
+
+  &--ouvert {
+    border-color: #4680ff;
+    box-shadow: 0 2px 12px rgba(70, 128, 255, 0.12);
+  }
+
+  &__entete {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    gap: 0.85rem;
+    padding: 0.85rem 1rem;
+  }
+
+  &__avatar {
+    align-items: center;
+    background: linear-gradient(135deg, #4680ff, #2c5fd6);
+    border-radius: 50%;
+    color: #fff;
+    display: flex;
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 600;
+    height: 38px;
+    justify-content: center;
+    width: 38px;
+  }
+
+  &__identite {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    width: 170px;
+  }
+
+  &__nom {
+    color: #262b31;
+    font-size: 14px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__adresse {
+    color: #a8b1bb;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // La colonne centrale absorbe l'espace restant ; min-width:0 est indispensable pour
+  // qu'un sujet très long puisse être tronqué au lieu d'élargir la ligne entière.
+  &__objet {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  &__sujet {
+    color: #262b31;
+    font-size: 14px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__extrait {
+    color: #8a94a0;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__meta {
+    align-items: center;
+    display: flex;
+    flex-shrink: 0;
+    gap: 0.5rem;
+
+    i {
+      color: #a8b1bb;
+      font-size: 16px;
+    }
+  }
+
+  &__date {
+    color: #a8b1bb;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  &__corps {
+    background: #fbfcfd;
+    border-top: 1px solid #edf0f3;
+    padding: 1rem 1rem 1rem 4rem;
+  }
+
+  // Le corps arrive en texte brut : white-space préserve les retours à la ligne du
+  // message d'origine, et pre-wrap évite le défilement horizontal des longues lignes.
+  &__texte {
+    background: none;
+    border: none;
+    color: #37424c;
+    font-family: inherit;
+    font-size: 13.5px;
+    line-height: 1.6;
+    margin: 0;
+    max-height: 320px;
+    overflow-y: auto;
+    padding: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  &__pj {
+    border-top: 1px dashed #e4e9ee;
+    margin-top: 0.9rem;
+    padding-top: 0.75rem;
+  }
+
+  &__pj-titre {
+    color: #8a94a0;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  &__pj-liste {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  &__actions {
+    align-items: center;
+    border-top: 1px solid #edf0f3;
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.9rem;
+    padding-top: 0.85rem;
+  }
+
+  &__suggestion {
+    color: #4caf50;
+    font-size: 12.5px;
+    margin-right: auto;
+
+    &--inconnu {
+      color: #ff9800;
+    }
+  }
+
+  &__trace {
+    align-items: center;
+    border-top: 1px solid #edf0f3;
+    color: #8a94a0;
+    display: flex;
+    font-size: 12.5px;
+    gap: 0.75rem;
+    justify-content: space-between;
+    margin-top: 0.9rem;
+    padding-top: 0.85rem;
+  }
+}
+
+// ---- Étiquettes ----
+.stb-tag {
+  background: #f1f4f8;
+  border-radius: 4px;
+  color: #6c7784;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  white-space: nowrap;
+
+  &--ok {
+    background: rgba(76, 175, 80, 0.12);
+    color: #3d9142;
+  }
+
+  &--off {
+    background: #f1f4f8;
+    color: #a8b1bb;
+  }
+
+  // La couleur porte l'urgence, mais le libellé reste lisible seul : un daltonien ou
+  // une impression en noir et blanc ne perdent aucune information.
+  &--priorite {
+    &[data-priorite='CRITIQUE'] {
+      background: rgba(255, 82, 82, 0.14);
+      color: #d63a3a;
+    }
+
+    &[data-priorite='HAUTE'] {
+      background: rgba(255, 152, 0, 0.14);
+      color: #d98100;
+    }
+
+    &[data-priorite='MOYENNE'] {
+      background: rgba(70, 128, 255, 0.12);
+      color: #3a6fd8;
+    }
+
+    &[data-priorite='BASSE'] {
+      background: #f1f4f8;
+      color: #8a94a0;
+    }
+  }
+}
+
+.stb-pj {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #e4e9ee;
+  border-radius: 6px;
+  color: #37424c;
+  display: inline-flex;
+  font-size: 12.5px;
+  gap: 0.4rem;
+  padding: 0.35rem 0.6rem;
+  text-decoration: none;
+  transition: border-color 0.15s ease-in-out;
+
+  &:hover {
+    border-color: #4680ff;
+    color: #4680ff;
+  }
+
+  &__taille {
+    color: #a8b1bb;
+    font-size: 11.5px;
+  }
+}
+
+// ---- États ----
+.stb-vide {
+  color: #8a94a0;
+  padding: 3rem 1rem;
+  text-align: center;
+
+  i {
+    color: #d7dde4;
+    font-size: 44px;
+  }
+
+  p {
+    margin-top: 0.75rem;
+  }
+}
+
+.stb-aide {
+  background: rgba(70, 128, 255, 0.07);
+  border-radius: 8px;
+  color: #4a5560;
+  font-size: 13px;
+  margin-bottom: 1rem;
+  padding: 0.7rem 0.85rem;
+}
+
+.stb-banner__sub {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  margin: 0.25rem 0 0;
+}
+
+// ---- Compléments de la fenêtre modale partagée ----
+.stb-modal {
+  &--large {
+    max-width: 680px;
+  }
+
+  &__footer {
+    border-top: 1px solid #edf0f3;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    padding: 0.85rem 1.25rem;
+  }
+}
+
+// ---- Adaptation aux petits écrans ----
+@media (max-width: 991px) {
+  .stb-mail {
+    &__identite {
+      width: 130px;
+    }
+
+    &__extrait {
+      display: none;
+    }
+
+    &__corps {
+      padding-left: 1rem;
+    }
+  }
+}
+
+@media (max-width: 767px) {
+  .stb-mail {
+    &__entete {
+      flex-wrap: wrap;
+    }
+
+    &__identite {
+      width: auto;
+    }
+
+    &__objet {
+      flex-basis: 100%;
+      order: 3;
+    }
+
+    &__actions {
+      flex-wrap: wrap;
+    }
+
+    &__suggestion {
+      flex-basis: 100%;
+      margin-bottom: 0.5rem;
+    }
+  }
+}

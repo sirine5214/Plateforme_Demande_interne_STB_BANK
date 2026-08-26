@@ -54,6 +54,11 @@ spec:
           envFrom:
             - configMapRef: { name: backend-config }
           env:
+            # Sans cette surcharge l'application ecoute sur le 8082 par defaut
+            # d'application.properties, et les trois sondes ci-dessous (qui interrogent 8080)
+            # echouent : le pod partirait en CrashLoopBackOff au demarrage.
+            - name: SERVER_PORT
+              value: "8080"
             - name: DB_NAME
               valueFrom: { secretKeyRef: { name: stb-secrets, key: POSTGRES_DB } }
             - name: DB_USERNAME

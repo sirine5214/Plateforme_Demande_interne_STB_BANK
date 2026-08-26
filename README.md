@@ -30,7 +30,9 @@
 - [Démarrage rapide en local (IDE)](#démarrage-rapide-en-local-ide)
 - [Démarrage avec Docker Compose](#démarrage-avec-docker-compose)
 - [Comptes de démonstration](#comptes-de-démonstration)
+- [Boîte de réception partagée](#boîte-de-réception-partagée)
 - [Qualité de code — SonarQube](#qualité-de-code--sonarqube)
+- [Test fonctionnel de bout en bout](#test-fonctionnel-de-bout-en-bout)
 - [Intégration & déploiement continus — Jenkins](#intégration--déploiement-continus--jenkins)
 - [Déploiement Kubernetes](#déploiement-kubernetes)
 - [Supervision — Prometheus & Grafana](#supervision--prometheus--grafana)
@@ -45,6 +47,8 @@ Un rôle **administrateur** gère les comptes utilisateurs.
 
 - **Back_office** : API REST Spring Boot (Java 21), sécurisée par JWT, PostgreSQL.
 - **Front_office** : SPA Angular (thème *Gradient Able*), consomme l'API REST et les notifications WebSocket.
+- **Boîte de réception partagée** : les e-mails envoyés à l'adresse de service sont relevés automatiquement
+  et proposés à la qualification, pour que rien ne se perde entre la messagerie et la plateforme.
 
 ## Architecture
 
@@ -95,7 +99,7 @@ Docker Compose que derrière un Ingress Kubernetes.
 | Base de données | PostgreSQL 16 |
 | Conteneurisation | Docker, Docker Compose, Nginx |
 | CI/CD | Jenkins (pipeline déclaratif) |
-| Qualité de code | SonarQube, JaCoCo (couverture backend) |
+| Qualité de code | SonarQube, JaCoCo (couverture backend), Vitest (tests + couverture frontend) |
 | Orchestration | Kubernetes (Deployments, StatefulSet, HPA, Ingress) |
 | Supervision | Spring Boot Actuator, Micrometer, Prometheus, Grafana |
 
@@ -113,12 +117,14 @@ STB_BANK/
 │   └── nginx.conf.template
 ├── docker-compose.yml           # Stack applicative locale (db, backend, frontend, prometheus, grafana)
 ├── devops/jenkins/docker-compose.ci.yml  # Infra CI locale (Jenkins + SonarQube)
+├── devops/tests/test_fonctionnel.py      # Test fonctionnel de bout en bout de l'API
 ├── Jenkinsfile                  # Pipeline CI/CD
 ├── k8s/                         # Manifestes Kubernetes
 │   ├── namespace.yaml, postgres.yaml, backend.yaml, frontend.yaml, ingress.yaml
 │   ├── secret.example.yaml      # Gabarit — copier en secret.yaml (non versionné)
 │   └── monitoring/servicemonitor.yaml
 ├── monitoring/                  # Config Prometheus + provisioning Grafana (Docker Compose)
+├── docs/                        # Scénario de démonstration
 └── .env.example                 # Gabarit de configuration Docker Compose
 ```
 
@@ -129,13 +135,13 @@ C'est le flux de travail habituel pour développer :
 1. **PostgreSQL** : instance locale sur le port `5434`, base `stb_bank` (voir
    [`application.properties`](Back_office/src/main/resources/application.properties) pour les identifiants par défaut).
 2. **Backend** : ouvrir `Back_office/` dans l'IDE (IntelliJ...) et lancer `Back_officeApplication`.
-   Démarre sur `http://localhost:8080` et peuple la base avec un jeu de données de démonstration
+   Démarre sur `http://localhost:8082` et peuple la base avec un jeu de données de démonstration
    au premier lancement (voir [comptes de démonstration](#comptes-de-démonstration)).
 3. **Frontend** :
    ```bash
    cd Front_office/template_STB/angular
    npm install
-   npm start   # ng serve — http://localhost:4200, appelle directement http://localhost:8080/api
+   npm start   # ng serve — http://localhost:4200, appelle directement http://localhost:8082/api
    ```
 
 ## Démarrage avec Docker Compose
@@ -171,6 +177,46 @@ Injectés automatiquement au premier démarrage si la base est vide (voir
 | Développeur | dev1@stb.tn / dev2@stb.tn |
 | Demandeur | demandeur@stb.tn / demandeur2@stb.tn |
 
+## Boîte de réception partagée
+
+Toutes les demandes n'arrivent pas par le formulaire : beaucoup partent d'un simple e-mail adressé
+à la boîte de service de la direction. La plateforme relève cette boîte, affiche les messages dans un
+écran **Boîte de réception** (`/emails`, réservé aux rôles *administrateur* et *chef de projet*) et
+permet de les transformer en demandes.
+
+**Un e-mail n'est jamais converti automatiquement.** L'expéditeur d'un message n'est pas authentifié
+et l'en-tête `From` est falsifiable : chaque message reste en attente d'une qualification humaine.
+
+| Statut | Signification |
+|---|---|
+| `NON_TRAITE` | Reçu, en attente de qualification |
+| `CONVERTI` | Transformé en demande — le lien vers la demande est conservé pour la traçabilité |
+| `IGNORE` | Écarté volontairement (spam, hors périmètre, doublon) — conservé, jamais supprimé |
+
+À l'ouverture d'un message, un **type** et une **priorité** sont pré-remplis par simple détection de
+mots-clés (comparaison insensible à la casse et aux accents). C'est une proposition modifiable, jamais
+une décision : des règles explicites restent vérifiables et explicables à un auditeur, ce qui compte
+davantage qu'un gain marginal de précision dans un contexte bancaire. Les pièces jointes du message
+sont récupérées et reportées sur la demande créée.
+
+**Endpoints** (`/api/emails`) :
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| `GET` | `/api/emails` | Liste paginée, filtrable par statut |
+| `GET` | `/api/emails/{id}` | Détail d'un message + pièces jointes |
+| `GET` | `/api/emails/non-traites/compte` | Compteur pour la pastille de navigation |
+| `POST` | `/api/emails/{id}/convertir` | Crée la demande à partir du message |
+| `POST` | `/api/emails/{id}/ignorer` | Écarte le message (motif obligatoire) |
+| `POST` | `/api/emails/relever` | Déclenche une relève immédiate (*administrateur*) |
+
+**Configuration.** Par défaut `stb.mail.client=fake` : une boîte en mémoire alimentée par des messages
+de démonstration, qui permet à l'application et à la CI de démarrer sans aucun compte de messagerie.
+Pour brancher la vraie boîte, passer `MAIL_CLIENT=imap` et renseigner les variables `MAIL_*`
+(voir [Variables d'environnement](#variables-denvironnement)) — les identifiants viennent toujours de
+l'environnement, jamais du fichier de properties. La relève est planifiée toutes les deux minutes
+(`MAIL_INTERVALLE_MS`), après un délai initial de 30 s.
+
 ## Qualité de code — SonarQube
 
 Deux projets sont analysés séparément :
@@ -180,10 +226,27 @@ Deux projets sont analysés séparément :
   ./mvnw sonar:sonar -Dsonar.host.url=http://localhost:9000 -Dsonar.token=<votre-jeton>
   ```
 - **Front_office/angular** (sonar-scanner CLI), configuration dans
-  [`sonar-project.properties`](Front_office/template_STB/angular/sonar-project.properties).
+  [`sonar-project.properties`](Front_office/template_STB/angular/sonar-project.properties) —
+  couverture via Vitest (`npm test`, builder `@angular/build:unit-test`), rapport lcov consommé
+  automatiquement par Sonar.
 
 Pour lancer un SonarQube local : `cd devops/jenkins && docker compose -f docker-compose.ci.yml up -d sonarqube sonarqube-db`,
 puis ouvrir http://localhost:9000 (identifiants par défaut `admin` / `admin`, à changer immédiatement).
+
+## Test fonctionnel de bout en bout
+
+[`devops/tests/test_fonctionnel.py`](devops/tests/test_fonctionnel.py) parcourt l'API complète avec les
+quatre rôles et vérifie chaque fonction : authentification, habilitations, cycle de vie d'une demande,
+messagerie, notifications, statistiques et boîte de réception. Il ne supprime rien — le jeu de données
+reste exploitable après exécution, et les comptes de test qu'il utilise sont créés à la volée puis
+réutilisés d'une exécution à l'autre.
+
+```bash
+python devops/tests/test_fonctionnel.py
+```
+
+Le backend doit être démarré sur `http://localhost:8082`. Le déroulé pas à pas pour une démonstration
+est décrit dans [`docs/SCENARIO-DEMONSTRATION.md`](docs/SCENARIO-DEMONSTRATION.md).
 
 ## Intégration & déploiement continus — Jenkins
 
@@ -191,7 +254,7 @@ Le [`Jenkinsfile`](Jenkinsfile) définit un pipeline déclaratif :
 
 ```
 Checkout → Build+Tests backend → Analyse SonarQube backend*
-         → Build frontend → Analyse SonarQube frontend*
+         → Build frontend → Tests frontend (Vitest) → Analyse SonarQube frontend*
          → Build images Docker → Push registre (branche main)*
          → Déploiement Kubernetes (branche main)*
 ```
@@ -255,7 +318,11 @@ Le backend expose ses métriques via Spring Boot Actuator + Micrometer sur `/act
   [`monitoring/prometheus/prometheus.yml`](monitoring/prometheus/prometheus.yml)) ; Grafana est
   pré-provisionné avec la datasource Prometheus et un dashboard
   [`STB Bank - Back Office`](monitoring/grafana/dashboards/stb-back-office.json) (débit HTTP,
-  latence p95, erreurs 5xx, mémoire JVM, CPU, connexions HikariCP).
+  latence p95, erreurs 5xx, mémoire JVM, CPU, connexions HikariCP) ainsi qu'un dashboard
+  [`STB Bank - Front Office`](monitoring/grafana/dashboards/stb-front-office.json).
+- Les percentiles (`p95`, `p99`) reposent sur les histogrammes Micrometer activés dans
+  `application.properties` : sans `management.metrics.distribution.percentiles-histogram.*`,
+  les séries `..._bucket` n'existent pas et tout panneau basé sur `histogram_quantile()` reste vide.
 - **Kubernetes** : soit via les annotations `prometheus.io/scrape` déjà posées sur le pod backend
   (Prometheus « classique »), soit via `k8s/monitoring/servicemonitor.yaml` si
   [kube-prometheus-stack](https://github.com/prometheus-community/helm-charts) est installé.
@@ -268,3 +335,17 @@ Les principales, côté backend, correspondent aux placeholders de
 [`application.properties`](Back_office/src/main/resources/application.properties) :
 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `JWT_EXPIRATION_MS`,
 `EXPOSER_JETON_RESET`, `UPLOAD_DIR` — toutes avec une valeur par défaut adaptée au développement local.
+
+| Variable | Défaut | Rôle |
+|---|---|---|
+| `SERVER_PORT` | `8082` | Port d'écoute du backend. `8082` sur le poste de développement, **`8080` en conteneur** — valeur attendue par le mapping Docker Compose, le `HEALTHCHECK` du Dockerfile et la cible Prometheus `backend:8080`. |
+| `MAIL_CLIENT` | `fake` | `fake` = boîte en mémoire (aucun serveur requis) ; `imap` = relève réelle. |
+| `MAIL_HOST` / `MAIL_PORT` | `localhost` / `1143` | Serveur IMAP de la boîte de service. |
+| `MAIL_PROTOCOL` | `imap` | `imap` ou `imaps`. |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | *(vide)* | Identifiants de la boîte — **jamais en dur**, au même titre que `JWT_SECRET`. |
+| `MAIL_DOSSIER` | `INBOX` | Dossier relevé. |
+| `MAIL_RELEVE_ACTIVE` | `true` | Coupe la relève planifiée sans toucher au reste de la configuration. |
+| `MAIL_INTERVALLE_MS` | `120000` | Période de relève (2 min). |
+| `MAIL_TAILLE_LOT` | `25` | Nombre de messages traités par passage. |
+| `MAIL_TAILLE_MAX_PJ` | `10485760` | Taille maximale d'une pièce jointe récupérée (10 Mo). |
+| `EMAIL_ATTACHMENTS_DIR` | `uploads/emails` | Répertoire de stockage des pièces jointes d'e-mails. |

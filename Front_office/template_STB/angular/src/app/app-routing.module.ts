@@ -26,6 +26,13 @@ const routes: Routes = [
         loadComponent: () => import('./demo/demandes/demandes.component').then((c) => c.DemandesComponent)
       },
       {
+        // Boîte partagée : seuls administrateurs et chefs de projet qualifient les e-mails.
+        // Le serveur applique la même restriction, ce garde n'evite qu'un aller-retour inutile.
+        path: 'emails',
+        canActivate: [roleGuard(['CHEF_DE_PROJET', 'ADMINISTRATEUR'])],
+        loadComponent: () => import('./demo/emails/boite-reception.component').then((c) => c.BoiteReceptionComponent)
+      },
+      {
         // Ouvert à tous : le périmètre des statistiques est cadré par rôle côté serveur
         path: 'statistiques',
         canActivate: [roleGuard(['DEMANDEUR', 'DEVELOPPEUR', 'CHEF_DE_PROJET', 'ADMINISTRATEUR'])],

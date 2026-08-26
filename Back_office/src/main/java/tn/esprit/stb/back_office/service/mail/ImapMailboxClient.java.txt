@@ -1,0 +1,242 @@
+package tn.esprit.stb.back_office.service.mail;
+
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Properties;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
+
+import jakarta.mail.Address;
+import jakarta.mail.Flags;
+import jakarta.mail.Folder;
+import jakarta.mail.Message;
+import jakarta.mail.MessagingException;
+import jakarta.mail.Multipart;
+import jakarta.mail.Part;
+import jakarta.mail.Session;
+import jakarta.mail.Store;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.search.FlagTerm;
+import jakarta.mail.search.MessageIDTerm;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import tn.esprit.stb.back_office.config.MailIngestionProperties;
+
+/**
+ * Relève la boîte partagée par IMAP.
+ *
+ * <p>Le drapeau {@code SEEN} sert de marqueur d'importation : seuls les messages non lus sont
+ * ramenés. Ce choix évite de maintenir un curseur applicatif, mais impose que le compte de
+ * service soit utilisé exclusivement par la plateforme — si un humain ouvre la boîte avec un
+ * client de messagerie, les messages qu'il consulte ne seront jamais importés.
+ *
+ * <p>Chaque opération ouvre puis referme sa propre connexion. C'est plus coûteux qu'une
+ * connexion maintenue, mais une relève toutes les deux minutes ne justifie pas la complexité
+ * d'un pool, et une connexion IMAP inactive est de toute façon fermée par le serveur.
+ */
+@Component
+@ConditionalOnProperty(prefix = "stb.mail", name = "client", havingValue = "imap")
+@RequiredArgsConstructor
+@Slf4j
+public class ImapMailboxClient implements MailboxClient {
+
+    private final MailIngestionProperties proprietes;
+
+    @Override
+    public List<EmailBrut> recupererNouveauxMessages(int limite) {
+        if (limite <= 0) {
+            return List.of();
+        }
+
+        Store store = null;
+        Folder dossier = null;
+        try {
+            store = ouvrirConnexion();
+            dossier = store.getFolder(proprietes.getDossier());
+            dossier.open(Folder.READ_ONLY);
+
+            Message[] nonLus = dossier.search(new FlagTerm(new Flags(Flags.Flag.SEEN), false));
+            log.info("Releve IMAP : {} message(s) non lu(s) dans {}", nonLus.length,
+                    proprietes.getDossier());
+
+            List<EmailBrut> messages = new ArrayList<>();
+            for (int i = 0; i < nonLus.length && messages.size() < limite; i++) {
+                try {
+                    messages.add(convertir(nonLus[i]));
+                } catch (MessagingException | IOException e) {
+                    // Un message illisible ne doit pas interrompre la releve des autres :
+                    // il restera non lu et sera represente au passage suivant.
+                    log.warn("Message IMAP ignore, lecture impossible : {}", e.getMessage());
+                }
+            }
+            return messages;
+
+        } catch (MessagingException e) {
+            throw new IllegalStateException(
+                    "Releve IMAP impossible sur " + proprietes.getHost(), e);
+        } finally {
+            fermer(dossier, store);
+        }
+    }
+
+    @Override
+    public void marquerCommeTraite(String messageId) {
+        Store store = null;
+        Folder dossier = null;
+        try {
+            store = ouvrirConnexion();
+            dossier = store.getFolder(proprietes.getDossier());
+            dossier.open(Folder.READ_WRITE);
+
+            Message[] trouves = dossier.search(new MessageIDTerm(messageId));
+            for (Message message : trouves) {
+                message.setFlag(Flags.Flag.SEEN, true);
+            }
+            if (trouves.length == 0) {
+                log.warn("Message {} introuvable sur le serveur : marquage ignore", messageId);
+            }
+        } catch (MessagingException e) {
+            // Echec non bloquant : le message sera represente a la releve suivante et la
+            // contrainte d'unicite sur message_id empechera le doublon en base.
+            log.warn("Marquage IMAP de {} impossible : {}", messageId, e.getMessage());
+        } finally {
+            fermer(dossier, store);
+        }
+    }
+
+    private Store ouvrirConnexion() throws MessagingException {
+        Properties parametres = new Properties();
+        parametres.put("mail.store.protocol", proprietes.getProtocol());
+        parametres.put("mail.imap.connectiontimeout", "10000");
+        parametres.put("mail.imap.timeout", "20000");
+        parametres.put("mail.imaps.connectiontimeout", "10000");
+        parametres.put("mail.imaps.timeout", "20000");
+
+        Session session = Session.getInstance(parametres);
+        Store store = session.getStore(proprietes.getProtocol());
+        store.connect(proprietes.getHost(), proprietes.getPort(),
+                proprietes.getUsername(), proprietes.getPassword());
+        return store;
+    }
+
+    private void fermer(Folder dossier, Store store) {
+        try {
+            if (dossier != null && dossier.isOpen()) {
+                dossier.close(false);
+            }
+        } catch (MessagingException e) {
+            log.warn("Fermeture du dossier IMAP impossible : {}", e.getMessage());
+        }
+        try {
+            if (store != null && store.isConnected()) {
+                store.close();
+            }
+        } catch (MessagingException e) {
+            log.warn("Fermeture de la connexion IMAP impossible : {}", e.getMessage());
+        }
+    }
+
+    private EmailBrut convertir(Message message) throws MessagingException, IOException {
+        ContenuMessage contenu = new ContenuMessage();
+        extraire(message, contenu);
+
+        return new EmailBrut(
+                identifiantDe(message),
+                adresseExpediteur(message),
+                nomExpediteur(message),
+                message.getSubject() == null ? "(sans objet)" : message.getSubject(),
+                contenu.texte,
+                contenu.html,
+                dateDe(message),
+                contenu.piecesJointes);
+    }
+
+    /**
+     * Un serveur peut ne pas exposer d'en-tête « Message-ID ». Une clé de repli est alors
+     * fabriquée à partir de l'expéditeur et de la date : moins robuste, mais suffisante pour
+     * que la contrainte d'unicité continue de jouer son rôle d'anti-doublon.
+     */
+    private String identifiantDe(Message message) throws MessagingException {
+        String[] entetes = message.getHeader("Message-ID");
+        if (entetes != null && entetes.length > 0 && entetes[0] != null
+                && !entetes[0].isBlank()) {
+            return entetes[0];
+        }
+        return "sans-id-" + adresseExpediteur(message) + "-" + dateDe(message);
+    }
+
+    private String adresseExpediteur(Message message) throws MessagingException {
+        Address[] expediteurs = message.getFrom();
+        if (expediteurs == null || expediteurs.length == 0) {
+            return "inconnu@invalide";
+        }
+        if (expediteurs[0] instanceof InternetAddress adresse && adresse.getAddress() != null) {
+            return adresse.getAddress();
+        }
+        return expediteurs[0].toString();
+    }
+
+    private String nomExpediteur(Message message) throws MessagingException {
+        Address[] expediteurs = message.getFrom();
+        if (expediteurs != null && expediteurs.length > 0
+                && expediteurs[0] instanceof InternetAddress adresse) {
+            return adresse.getPersonal();
+        }
+        return null;
+    }
+
+    private LocalDateTime dateDe(Message message) throws MessagingException {
+        Date date = message.getSentDate() != null
+                ? message.getSentDate()
+                : message.getReceivedDate();
+        if (date == null) {
+            return LocalDateTime.now();
+        }
+        return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+    }
+
+    /**
+     * Parcourt récursivement la structure MIME : un message peut imbriquer des parties
+     * alternatives (texte et HTML) à l'intérieur de parties mixtes (corps et pièces jointes).
+     */
+    private void extraire(Part partie, ContenuMessage contenu)
+            throws MessagingException, IOException {
+
+        if (partie.getContent() instanceof Multipart multipart) {
+            for (int i = 0; i < multipart.getCount(); i++) {
+                extraire(multipart.getBodyPart(i), contenu);
+            }
+            return;
+        }
+
+        String disposition = partie.getDisposition();
+        boolean estPieceJointe = Part.ATTACHMENT.equalsIgnoreCase(disposition)
+                || (partie.getFileName() != null && !partie.getFileName().isBlank());
+
+        if (estPieceJointe) {
+            contenu.piecesJointes.add(new EmailBrut.PieceJointeBrute(
+                    partie.getFileName(),
+                    partie.getContentType(),
+                    partie.getInputStream().readAllBytes()));
+            return;
+        }
+
+        if (partie.isMimeType("text/plain") && contenu.texte == null) {
+            contenu.texte = String.valueOf(partie.getContent());
+        } else if (partie.isMimeType("text/html") && contenu.html == null) {
+            contenu.html = String.valueOf(partie.getContent());
+        }
+    }
+
+    /** Accumulateur du parcours MIME. */
+    private static final class ContenuMessage {
+        private String texte;
+        private String html;
+        private final List<EmailBrut.PieceJointeBrute> piecesJointes = new ArrayList<>();
+    }
+}

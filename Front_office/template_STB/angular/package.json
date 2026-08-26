@@ -53,11 +53,14 @@
     "@types/node": "22.19.0",
     "@typescript-eslint/eslint-plugin": "8.62.0",
     "@typescript-eslint/parser": "8.62.0",
+    "@vitest/coverage-v8": "^4.1.11",
     "angular-eslint": "^21.4.0",
     "eslint": "10.5.0",
+    "jsdom": "^29.1.1",
     "prettier": "3.8.4",
     "typescript": "5.9.3",
-    "typescript-eslint": "^8.62.0"
+    "typescript-eslint": "^8.62.0",
+    "vitest": "^4.1.11"
   },
   "optionalDependencies": {
     "@emnapi/core": "1.11.3",

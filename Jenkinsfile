@@ -63,6 +63,30 @@ pipeline {
             }
         }
 
+        /*
+         * Sonde SonarQube une seule fois, en 5 secondes, plutot que de laisser chaque scanner
+         * partir en timeout d'environ 75 s quand le serveur est absent ou encore en cours de
+         * demarrage. /api/system/status ne repond {"status":"UP"} que lorsque SonarQube est
+         * reellement operationnel (pendant le boot Elasticsearch il repond "STARTING").
+         */
+        stage('Preflight: SonarQube') {
+            steps {
+                script {
+                    def body = sh(
+                        returnStdout: true,
+                        script: "curl -s -m 5 --noproxy '*' ${SONAR_HOST_URL}/api/system/status || true"
+                    ).trim()
+                    env.SONAR_UP = body.contains('"status":"UP"') ? 'true' : 'false'
+                    if (env.SONAR_UP == 'true') {
+                        echo "SonarQube operationnel sur ${SONAR_HOST_URL} - analyses activees"
+                    } else {
+                        echo "SonarQube injoignable ou non demarre sur ${SONAR_HOST_URL} " +
+                             "(reponse recue: '${body}') - analyses sautees, le pipeline continue"
+                    }
+                }
+            }
+        }
+
         stage('Backend: Build & Unit Tests') {
             steps {
                 dir(BACKEND_DIR) {
@@ -77,19 +101,27 @@ pipeline {
         }
 
         stage('Backend: SonarQube Analysis') {
+            when { expression { env.SONAR_UP == 'true' } }
             steps {
                 catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
-                    dir(BACKEND_DIR) {
-                        withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                            sh '''
-                                chmod +x ./mvnw
-                                ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-                                  -Dsonar.projectKey=stb-bank-back-office \
-                                  -Dsonar.projectName="STB Bank - Back Office" \
-                                  -Dsonar.host.url=${SONAR_HOST_URL} \
-                                  -Dsonar.token=$SONAR_TOKEN \
-                                  -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
-                            '''
+                    timeout(time: 10, unit: 'MINUTES') {
+                        dir(BACKEND_DIR) {
+                            withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                                sh '''
+                                    # SonarQube est un service interne au reseau Docker : un proxy
+                                    # HTTP herite de l'environnement Jenkins ferait echouer l'appel.
+                                    # On le neutralise pour cet hote uniquement.
+                                    export NO_PROXY="jenkins-sonarqube,localhost,127.0.0.1"
+                                    export no_proxy="$NO_PROXY"
+                                    chmod +x ./mvnw
+                                    ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar \
+                                      -Dsonar.projectKey=stb-bank-back-office \
+                                      -Dsonar.projectName="STB Bank - Back Office" \
+                                      -Dsonar.host.url=${SONAR_HOST_URL} \
+                                      -Dsonar.token=$SONAR_TOKEN \
+                                      -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+                                '''
+                            }
                         }
                     }
                 }
@@ -107,12 +139,35 @@ pipeline {
             }
         }
 
+        stage('Frontend: Unit Tests') {
+            steps {
+                dir(FRONTEND_DIR) {
+                    // Vitest (via le builder @angular/build:unit-test) tourne en headless
+                    // sur jsdom : pas besoin de Chrome sur l'agent. --no-watch est requis en
+                    // CI (sinon la commande reste bloquée en mode watch).
+                    sh 'npx ng test --no-watch'
+                }
+            }
+            post {
+                always {
+                    junit testResults: "${FRONTEND_DIR}/test-results/junit.xml", allowEmptyResults: true
+                }
+            }
+        }
+
         stage('Frontend: SonarQube Analysis') {
+            when { expression { env.SONAR_UP == 'true' } }
             steps {
                 catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
-                    dir(FRONTEND_DIR) {
-                        withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                            sh 'sonar-scanner -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.token=$SONAR_TOKEN'
+                    timeout(time: 10, unit: 'MINUTES') {
+                        dir(FRONTEND_DIR) {
+                            withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                                sh '''
+                                    export NO_PROXY="jenkins-sonarqube,localhost,127.0.0.1"
+                                    export no_proxy="$NO_PROXY"
+                                    sonar-scanner -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.token=$SONAR_TOKEN
+                                '''
+                            }
                         }
                     }
                 }

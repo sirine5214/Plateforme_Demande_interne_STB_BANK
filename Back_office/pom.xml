@@ -51,6 +51,19 @@
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
 
+        <!--
+            Releve IMAP de la boite partagee des demandes internes (Jakarta Mail).
+            Neutralisee tant qu'IntelliJ ne reimporte pas le modele Maven : le seul fichier
+            qui l'utilise, ImapMailboxClient, est momentanement renomme en .java.txt donc
+            exclu de la compilation. Pour reactiver la releve reelle : retablir le nom du
+            fichier et decommenter ce bloc.
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+        -->
+
         <!-- Supervision : expose /actuator/health (probes k8s) et /actuator/prometheus (Grafana) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -25,6 +25,21 @@ import {
 import { GUIDES_TYPE } from './type-demande.guide';
 
 const PAGE_SIZE = 8;
+
+/** Message enrichi des informations d'affichage calculees une seule fois. */
+interface MessageAffiche {
+  message: Message;
+  moi: boolean;
+  /** Faux pour les messages consecutifs d'un meme auteur : l'avatar n'est alors pas repete. */
+  avecAvatar: boolean;
+}
+
+/** Messages d'une meme journee, precedes de leur separateur. */
+interface BlocJournalier {
+  cle: string;
+  libelle: string;
+  messages: MessageAffiche[];
+}
 
 @Component({
   selector: 'app-demandes',
@@ -103,6 +118,40 @@ export class DemandesComponent implements OnInit {
   messagesLoading = signal(false);
   messageEnCours = '';
   envoiMessage = signal(false);
+
+  private filRef = viewChild<ElementRef<HTMLDivElement>>('filDiscussion');
+
+  /**
+   * Fil decoupe par journee et par auteur.
+   *
+   * Regrouper evite la repetition de l'avatar et du nom a chaque ligne : sur une discussion
+   * un peu longue, c'est ce qui distingue une conversation lisible d'un mur de vignettes.
+   */
+  filGroupe = computed<BlocJournalier[]>(() => {
+    const blocs: BlocJournalier[] = [];
+    let precedentAuteur: number | null = null;
+
+    for (const message of this.messages()) {
+      const cle = message.dateEnvoi.slice(0, 10);
+      let bloc = blocs.at(-1);
+
+      if (!bloc || bloc.cle !== cle) {
+        bloc = { cle, libelle: this.libelleJour(cle), messages: [] };
+        blocs.push(bloc);
+        // Changement de jour : le premier message reaffiche toujours son avatar.
+        precedentAuteur = null;
+      }
+
+      bloc.messages.push({
+        message,
+        moi: this.estMonMessage(message),
+        avecAvatar: message.expediteurId !== precedentAuteur
+      });
+      precedentAuteur = message.expediteurId;
+    }
+
+    return blocs;
+  });
 
   // pièces jointes (BF 2.2.6)
   piecesOpen = signal(false);
@@ -382,6 +431,7 @@ export class DemandesComponent implements OnInit {
       next: (fil) => {
         this.messages.set(fil);
         this.messagesLoading.set(false);
+        this.defilerEnBas();
         this.messagerieService.marquerLus(demandeId).subscribe({ error: () => undefined });
       },
       error: () => {
@@ -406,6 +456,7 @@ export class DemandesComponent implements OnInit {
         this.messages.update((fil) => [...fil, message]);
         this.messageEnCours = '';
         this.envoiMessage.set(false);
+        this.defilerEnBas();
       },
       error: (err) => {
         this.envoiMessage.set(false);
@@ -420,6 +471,37 @@ export class DemandesComponent implements OnInit {
 
   avatarMessage(message: Message): string {
     return resolveAvatarUrl(message.expediteurPhotoUrl);
+  }
+
+  /** « Aujourd'hui » et « Hier » plutot qu'une date : c'est ainsi qu'on situe une conversation recente. */
+  private libelleJour(cleIso: string): string {
+    const jour = new Date(cleIso + 'T00:00:00');
+    const aujourdhui = new Date();
+    aujourdhui.setHours(0, 0, 0, 0);
+
+    const ecartJours = Math.round((aujourdhui.getTime() - jour.getTime()) / 86_400_000);
+    if (ecartJours === 0) {
+      return "Aujourd'hui";
+    }
+    if (ecartJours === 1) {
+      return 'Hier';
+    }
+    return jour.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  /**
+   * Ramene le fil sur le dernier message.
+   *
+   * Le setTimeout laisse Angular appliquer le rendu : sans ce report, scrollHeight vaudrait
+   * encore la hauteur d'avant l'ajout et le defilement s'arreterait trop haut.
+   */
+  private defilerEnBas(): void {
+    setTimeout(() => {
+      const element = this.filRef()?.nativeElement;
+      if (element) {
+        element.scrollTop = element.scrollHeight;
+      }
+    });
   }
 
   /**

@@ -1,116 +1,1022 @@
 {
   "title": "STB Bank - Back Office (Spring Boot)",
   "uid": "stb-back-office",
+  "tags": ["stb", "back-office", "spring-boot"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
+  "editable": true,
+  "graphTooltip": 1,
   "refresh": "10s",
   "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "endpoint",
+        "label": "Endpoint",
+        "type": "query",
+        "datasource": "Prometheus",
+        "query": "label_values(http_server_requests_seconds_count{job=\"stb-back-office\"}, uri)",
+        "refresh": 2,
+        "sort": 1,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "current": { "text": "All", "value": "$__all", "selected": true }
+      }
+    ]
+  },
   "panels": [
     {
       "id": 1,
-      "title": "Statut du service",
-      "type": "stat",
-      "datasource": "Prometheus",
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
-      "targets": [{ "expr": "up{job=\"stb-back-office\"}", "legendFormat": "up" }],
-      "fieldConfig": {
-        "defaults": {
-          "mappings": [
-            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }
-          ]
-        }
-      }
+      "type": "row",
+      "title": "Vue d'ensemble",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "collapsed": false,
+      "panels": []
     },
     {
       "id": 2,
-      "title": "Uptime",
+      "title": "Statut du service",
       "type": "stat",
       "datasource": "Prometheus",
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
-      "targets": [{ "expr": "process_uptime_seconds{job=\"stb-back-office\"}" }],
-      "fieldConfig": { "defaults": { "unit": "s" } }
+      "description": "Prometheus arrive-t-il a scraper /actuator/prometheus sur le backend ?",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "targets": [{ "refId": "A", "expr": "up{job=\"stb-back-office\"}" }],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "DOWN",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": { "text": "HORS SERVICE", "color": "red", "index": 0 },
+                "1": { "text": "EN LIGNE", "color": "green", "index": 1 }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }]
+          }
+        },
+        "overrides": []
+      }
     },
     {
       "id": 3,
-      "title": "Connexions actives HikariCP",
+      "title": "Uptime",
       "type": "stat",
       "datasource": "Prometheus",
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
-      "targets": [{ "expr": "hikaricp_connections_active{job=\"stb-back-office\"}" }]
+      "description": "Temps ecoule depuis le dernier demarrage de la JVM.",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "targets": [{ "refId": "A", "expr": "process_uptime_seconds{job=\"stb-back-office\"}" }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "s", "decimals": 0, "color": { "mode": "fixed", "fixedColor": "text" } },
+        "overrides": []
+      }
     },
     {
       "id": 4,
-      "title": "Threads JVM",
+      "title": "Debit",
       "type": "stat",
       "datasource": "Prometheus",
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
-      "targets": [{ "expr": "jvm_threads_live_threads{job=\"stb-back-office\"}" }]
+      "description": "Requetes HTTP servies par seconde, tous endpoints confondus.",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"stb-back-office\"}[$__rate_interval]))"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 2,
+          "noValue": "0",
+          "color": { "mode": "fixed", "fixedColor": "blue" }
+        },
+        "overrides": []
+      }
     },
     {
       "id": 5,
-      "title": "Débit de requêtes HTTP (req/s)",
-      "type": "timeseries",
+      "title": "Taux d'erreur 5xx",
+      "type": "stat",
       "datasource": "Prometheus",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "description": "Part des reponses 5xx dans le trafic total. Vert < 1 %, orange < 5 %, rouge au-dela.",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
       "targets": [
         {
-          "expr": "sum(rate(http_server_requests_seconds_count{job=\"stb-back-office\"}[1m])) by (uri, status)",
-          "legendFormat": "{{uri}} [{{status}}]"
+          "refId": "A",
+          "expr": "100 * sum(rate(http_server_requests_seconds_count{job=\"stb-back-office\", status=~\"5..\"}[$__rate_interval])) / sum(rate(http_server_requests_seconds_count{job=\"stb-back-office\"}[$__rate_interval]))"
         }
-      ]
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 2,
+          "noValue": "0",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        },
+        "overrides": []
+      }
     },
     {
       "id": 6,
-      "title": "Latence HTTP p95 (s)",
-      "type": "timeseries",
+      "title": "Latence moyenne",
+      "type": "stat",
       "datasource": "Prometheus",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "description": "somme(duree) / nombre de requetes sur la fenetre. Vert < 200 ms, orange < 1 s.",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{job=\"stb-back-office\"}[5m])) by (le, uri))",
-          "legendFormat": "{{uri}}"
+          "refId": "A",
+          "expr": "sum(rate(http_server_requests_seconds_sum{job=\"stb-back-office\"}[$__rate_interval])) / sum(rate(http_server_requests_seconds_count{job=\"stb-back-office\"}[$__rate_interval]))"
         }
-      ]
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3,
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.2 },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      }
     },
     {
       "id": 7,
-      "title": "Taux d'erreurs HTTP 5xx",
-      "type": "timeseries",
+      "title": "Heap JVM",
+      "type": "gauge",
       "datasource": "Prometheus",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "description": "Occupation du tas. Le filtre > 0 ecarte les zones G1 dont le max vaut -1 (illimite).",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
       "targets": [
         {
-          "expr": "sum(rate(http_server_requests_seconds_count{job=\"stb-back-office\", status=~\"5..\"}[5m]))",
-          "legendFormat": "erreurs 5xx / s"
+          "refId": "A",
+          "expr": "100 * sum(jvm_memory_used_bytes{job=\"stb-back-office\", area=\"heap\"}) / sum(jvm_memory_max_bytes{job=\"stb-back-office\", area=\"heap\"} > 0)"
         }
-      ]
+      ],
+      "options": {
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 70 },
+              { "color": "red", "value": 88 }
+            ]
+          }
+        },
+        "overrides": []
+      }
     },
     {
       "id": 8,
-      "title": "Mémoire JVM utilisée (heap)",
-      "type": "timeseries",
+      "title": "Disponibilite dans le temps",
+      "type": "state-timeline",
       "datasource": "Prometheus",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
-      "targets": [
-        {
-          "expr": "sum(jvm_memory_used_bytes{job=\"stb-back-office\", area=\"heap\"}) by (id)",
-          "legendFormat": "{{id}}"
-        }
-      ],
-      "fieldConfig": { "defaults": { "unit": "bytes" } }
+      "description": "Frise des interruptions : chaque bande rouge est une periode ou le backend ne repondait pas au scrape.",
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 5 },
+      "targets": [{ "refId": "A", "expr": "up{job=\"stb-back-office\"}", "legendFormat": "back-office" }],
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "rowHeight": 0.9,
+        "alignValue": "center",
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": { "text": "hors service", "color": "red", "index": 0 },
+                "1": { "text": "en ligne", "color": "green", "index": 1 }
+              }
+            }
+          ],
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }]
+          },
+          "custom": { "lineWidth": 0, "fillOpacity": 90 }
+        },
+        "overrides": []
+      }
     },
     {
       "id": 9,
-      "title": "CPU process (%)",
+      "type": "row",
+      "title": "Trafic HTTP",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 10,
+      "title": "Debit par endpoint",
       "type": "timeseries",
       "datasource": "Prometheus",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "description": "Empile le trafic par URI. Utilise le selecteur Endpoint en haut du dashboard pour filtrer.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
       "targets": [
-        { "expr": "process_cpu_usage{job=\"stb-back-office\"} * 100", "legendFormat": "process" },
-        { "expr": "system_cpu_usage{job=\"stb-back-office\"} * 100", "legendFormat": "system" }
+        {
+          "refId": "A",
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{job=\"stb-back-office\", uri=~\"$endpoint\"}[$__rate_interval]))",
+          "legendFormat": "{{uri}}"
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "percent" } }
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": ["mean", "max", "lastNotNull"]
+        },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "fillOpacity": 35,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "stacking": { "mode": "normal", "group": "A" }
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 11,
+      "title": "Repartition des codes HTTP",
+      "type": "piechart",
+      "datasource": "Prometheus",
+      "description": "Volume par code de reponse sur toute la fenetre de temps affichee.",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 10 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (status) (increase(http_server_requests_seconds_count{job=\"stb-back-office\"}[$__range]))",
+          "legendFormat": "{{status}}",
+          "instant": true
+        }
+      ],
+      "options": {
+        "pieType": "donut",
+        "displayLabels": ["percent"],
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true, "values": ["value"] },
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0 },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "200" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "4.." },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "5.." },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 12,
+      "title": "Endpoints les plus appeles",
+      "type": "bargauge",
+      "datasource": "Prometheus",
+      "description": "Top 8 des URI par nombre d'appels sur la fenetre affichee.",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 10 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(8, sum by (uri) (increase(http_server_requests_seconds_count{job=\"stb-back-office\"}[$__range])))",
+          "legendFormat": "{{uri}}",
+          "instant": true
+        }
+      ],
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "text",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0, "color": { "mode": "continuous-BlPu" } },
+        "overrides": []
+      }
+    },
+    {
+      "id": 13,
+      "type": "row",
+      "title": "Latence",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 14,
+      "title": "Latence moyenne vs pic par endpoint",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "description": "Trait plein = moyenne, pointille = pic observe. Un ecart large signale des requetes lentes noyees dans la moyenne.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 19 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_sum{job=\"stb-back-office\", uri=~\"$endpoint\"}[$__rate_interval])) / sum by (uri) (rate(http_server_requests_seconds_count{job=\"stb-back-office\", uri=~\"$endpoint\"}[$__rate_interval]))",
+          "legendFormat": "moy {{uri}}"
+        },
+        {
+          "refId": "B",
+          "expr": "max by (uri) (http_server_requests_seconds_max{job=\"stb-back-office\", uri=~\"$endpoint\"})",
+          "legendFormat": "pic {{uri}}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "showLegend": true, "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": "pic .*" },
+            "properties": [
+              { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [6, 6] } },
+              { "id": "custom.lineWidth", "value": 1 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 15,
+      "title": "Percentiles de latence (p50 / p95 / p99)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "description": "Necessite management.metrics.distribution.percentiles-histogram.http.server.requests=true dans application.properties, puis un rebuild du backend. Sans cela Micrometer n'expose pas les series _bucket et ce panel reste vide.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 19 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"stb-back-office\", uri=~\"$endpoint\"}[$__rate_interval])))",
+          "legendFormat": "p50 (mediane)"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"stb-back-office\", uri=~\"$endpoint\"}[$__rate_interval])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"stb-back-office\", uri=~\"$endpoint\"}[$__rate_interval])))",
+          "legendFormat": "p99"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "p50 (mediane)" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "p95" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "p99" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 16,
+      "title": "Endpoints les plus lents",
+      "type": "table",
+      "datasource": "Prometheus",
+      "description": "Latence moyenne par couple methode + URI sur la fenetre affichee. Colonnes triables et filtrables.",
+      "gridPos": { "h": 7, "w": 14, "x": 0, "y": 27 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum by (method, uri) (rate(http_server_requests_seconds_sum{job=\"stb-back-office\"}[$__range])) / sum by (method, uri) (rate(http_server_requests_seconds_count{job=\"stb-back-office\"}[$__range])))",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "job": true, "instance": true },
+            "renameByName": { "method": "Methode", "uri": "Endpoint", "Value": "Latence moyenne" }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": { "fields": {}, "sort": [{ "field": "Latence moyenne", "desc": true }] }
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": { "show": false, "reducer": ["sum"], "fields": "" }
+      },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "auto", "filterable": true } },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Latence moyenne" },
+            "properties": [
+              { "id": "unit", "value": "s" },
+              { "id": "decimals", "value": 3 },
+              { "id": "min", "value": 0 },
+              { "id": "custom.cellOptions", "value": { "type": "gauge", "mode": "gradient" } },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": null },
+                    { "color": "orange", "value": 0.2 },
+                    { "color": "red", "value": 1 }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 17,
+      "title": "Requetes en cours de traitement",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "description": "Requetes actuellement dans le pipeline Tomcat. Une montee durable = saturation du pool de threads.",
+      "gridPos": { "h": 7, "w": 10, "x": 14, "y": 27 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(http_server_requests_active_seconds_active_count{job=\"stb-back-office\"})",
+          "legendFormat": "requetes actives"
+        },
+        {
+          "refId": "B",
+          "expr": "tomcat_sessions_active_current_sessions{job=\"stb-back-office\"}",
+          "legendFormat": "sessions Tomcat"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 18,
+      "type": "row",
+      "title": "Base de donnees",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 34 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 19,
+      "title": "Pool de connexions HikariCP",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "description": "Si 'en attente' decolle alors que 'actives' touche 'max', le pool est le goulot d'etranglement.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 35 },
+      "targets": [
+        { "refId": "A", "expr": "hikaricp_connections_active{job=\"stb-back-office\"}", "legendFormat": "actives" },
+        { "refId": "B", "expr": "hikaricp_connections_idle{job=\"stb-back-office\"}", "legendFormat": "inactives" },
+        { "refId": "C", "expr": "hikaricp_connections_pending{job=\"stb-back-office\"}", "legendFormat": "en attente" },
+        { "refId": "D", "expr": "hikaricp_connections_max{job=\"stb-back-office\"}", "legendFormat": "max (capacite)" }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": ["mean", "max", "lastNotNull"]
+        },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "actives" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "inactives" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "en attente" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } },
+              { "id": "custom.fillOpacity", "value": 45 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "max (capacite)" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "text" } },
+              { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [8, 8] } },
+              { "id": "custom.fillOpacity", "value": 0 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 20,
+      "title": "Appels aux repositories Spring Data",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "description": "Top 10 des methodes de repository les plus sollicitees : montre quelles entites metier portent la charge.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 35 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum by (repository, method) (rate(spring_data_repository_invocations_seconds_count{job=\"stb-back-office\"}[$__rate_interval])))",
+          "legendFormat": "{{repository}}.{{method}}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "showLegend": true, "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 70,
+            "gradientMode": "hue",
+            "showPoints": "never",
+            "stacking": { "mode": "normal", "group": "A" }
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 21,
+      "type": "row",
+      "title": "JVM & systeme",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 43 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 22,
+      "title": "Memoire heap par zone",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "description": "Eden en dents de scie est normal. Old Gen qui monte sans jamais redescendre = fuite memoire.",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 44 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (id) (jvm_memory_used_bytes{job=\"stb-back-office\", area=\"heap\"})",
+          "legendFormat": "{{id}}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "fillOpacity": 40,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "stacking": { "mode": "normal", "group": "A" }
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 23,
+      "title": "CPU",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "description": "CPU consomme par le processus Java vs CPU de la machine entiere.",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 44 },
+      "targets": [
+        { "refId": "A", "expr": "process_cpu_usage{job=\"stb-back-office\"} * 100", "legendFormat": "processus Java" },
+        { "refId": "B", "expr": "system_cpu_usage{job=\"stb-back-office\"} * 100", "legendFormat": "systeme" }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "decimals": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "gradientMode": "opacity",
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "processus Java" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "purple" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "systeme" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "text" } },
+              { "id": "custom.fillOpacity", "value": 0 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 24,
+      "title": "Threads JVM",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "description": "Un ecart croissant entre 'vivants' et 'pic' revele des threads qui ne sont jamais liberes.",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 44 },
+      "targets": [
+        { "refId": "A", "expr": "jvm_threads_live_threads{job=\"stb-back-office\"}", "legendFormat": "vivants" },
+        { "refId": "B", "expr": "jvm_threads_daemon_threads{job=\"stb-back-office\"}", "legendFormat": "daemon" },
+        { "refId": "C", "expr": "jvm_threads_peak_threads{job=\"stb-back-office\"}", "legendFormat": "pic" }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "pic" },
+            "properties": [
+              { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [6, 6] } },
+              { "id": "custom.fillOpacity", "value": 0 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 25,
+      "title": "Garbage collector",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "description": "Duree moyenne d'une pause GC (axe gauche) et frequence des pauses (axe droit). Des pauses longues et frequentes degradent directement la latence HTTP.",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 52 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(jvm_gc_pause_seconds_sum{job=\"stb-back-office\"}[$__rate_interval])) / sum(rate(jvm_gc_pause_seconds_count{job=\"stb-back-office\"}[$__rate_interval]))",
+          "legendFormat": "duree moyenne de pause"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(jvm_gc_pause_seconds_count{job=\"stb-back-office\"}[$__rate_interval]))",
+          "legendFormat": "pauses par seconde"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 4,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "pauses par seconde" },
+            "properties": [
+              { "id": "unit", "value": "short" },
+              { "id": "custom.axisPlacement", "value": "right" },
+              { "id": "custom.fillOpacity", "value": 0 },
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 26,
+      "title": "Journalisation par niveau",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "description": "Debit de logs par niveau. Un pic de ERROR precede souvent une degradation visible cote HTTP.",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 52 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (level) (rate(logback_events_total{job=\"stb-back-office\"}[$__rate_interval]))",
+          "legendFormat": "{{level}}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "showPoints": "never",
+            "stacking": { "mode": "normal", "group": "A" }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "error" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "warn" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "info" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "debug" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "text" } }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 27,
+      "type": "row",
+      "title": "Erreurs & securite",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 59 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 28,
+      "title": "Erreurs HTTP 4xx / 5xx",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "description": "4xx = erreur d'appelant (mauvaise requete, non authentifie). 5xx = defaut du backend.",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 60 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (status) (rate(http_server_requests_seconds_count{job=\"stb-back-office\", status=~\"[45]..\"}[$__rate_interval]))",
+          "legendFormat": "HTTP {{status}}"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (exception) (rate(http_server_requests_seconds_count{job=\"stb-back-office\", exception!=\"none\"}[$__rate_interval]))",
+          "legendFormat": "exception {{exception}}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "showLegend": true, "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 70,
+            "showPoints": "never",
+            "stacking": { "mode": "normal", "group": "A" }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": "HTTP 5.." },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "HTTP 4.." },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 29,
+      "title": "Spring Security : acces autorises vs refuses",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "description": "Panel specifique au contexte bancaire : un pic de decisions 'false' ou de refus d'acces signale des tentatives non autorisees, ou une vague de tokens JWT expires.",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 60 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (spring_security_authorization_decision) (rate(spring_security_authorizations_seconds_count{job=\"stb-back-office\"}[$__rate_interval]))",
+          "legendFormat": "decision = {{spring_security_authorization_decision}}"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(spring_security_filterchains_access_exceptions_after_total{job=\"stb-back-office\"}[$__rate_interval]))",
+          "legendFormat": "refus d'acces"
+        },
+        {
+          "refId": "C",
+          "expr": "sum(rate(spring_security_http_secured_requests_seconds_count{job=\"stb-back-office\"}[$__rate_interval]))",
+          "legendFormat": "requetes securisees"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "showLegend": true, "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "decision = false" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "decision = true" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "refus d'acces" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }]
+          }
+        ]
+      }
     }
   ]
 }
