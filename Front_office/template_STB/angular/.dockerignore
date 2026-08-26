@@ -1,5 +1,6 @@
 node_modules/
-dist/
+# dist/ n'est plus exclu : Dockerfile.ci copie le bundle deja construit par l'agent.
+# node_modules/ reste exclu, c'est lui qui pesait dans le contexte.
 .angular/
 .idea/
 .vscode/

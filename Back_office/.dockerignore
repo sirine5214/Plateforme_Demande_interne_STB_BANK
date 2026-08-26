@@ -1,4 +1,7 @@
-target/
+# Dockerfile.ci copie le jar deja construit par l'agent ; le reste de target/
+# (classes, rapports surefire/jacoco) n'a rien a faire dans le contexte de build.
+target/*
+!target/*.jar
 .mvn/wrapper/maven-wrapper.jar
 .idea/
 *.iml

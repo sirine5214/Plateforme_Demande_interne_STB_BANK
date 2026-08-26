@@ -1,0 +1,25 @@
+# Image d'execution seule — utilisee par le pipeline Jenkins.
+#
+# Le jar est deja construit par l'etape « Backend: Build & Unit Tests » (./mvnw clean verify),
+# avec le depot Maven local de l'agent deja chaud : environ 1 min 30. Le Dockerfile
+# multi-etapes refaisait ce meme travail dans un conteneur au depot vide, ce qui retelecharge
+# l'arbre de dependances complet a chaque build — plus de 30 minutes sur un lien lent, jusqu'a
+# perdre le heartbeat du wrapper Jenkins et faire echouer l'etape (JENKINS-48300).
+#
+# Le Dockerfile principal reste multi-etapes : il doit fonctionner pour
+# « docker compose up --build » sur un poste ou aucun jar n'a ete construit au prealable.
+# L'etage d'execution est identique dans les deux fichiers ; l'image produite est la meme.
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring:spring
+
+COPY target/*.jar app.jar
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+    CMD wget -q -O /dev/null http://localhost:8080/actuator/health || exit 1
+
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

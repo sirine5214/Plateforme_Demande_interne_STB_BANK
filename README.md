@@ -266,6 +266,15 @@ L'analyse SonarQube appelle directement l'API Sonar avec un jeton (pas de config
 globale "SonarQube servers" à faire dans Jenkins), donc pas de dépendance à un webhook ni à
 un outil `SonarScanner` déclaré séparément.
 
+Les images Docker de l'étape *Build Images* sont construites par
+[`Back_office/Dockerfile.ci`](Back_office/Dockerfile.ci) et
+[`angular/Dockerfile.ci`](Front_office/template_STB/angular/Dockerfile.ci), qui se contentent
+d'empaqueter le `target/*.jar` et le `dist/` **déjà produits par les étapes précédentes du
+pipeline**. Les `Dockerfile` multi-étapes, eux, reconstruisent depuis les sources et servent au
+`docker compose up --build` d'un poste de développement : dans un conteneur au dépôt Maven et
+au cache npm vides, ils retéléchargent tout l'arbre de dépendances, ce qui prend des dizaines
+de minutes en CI pour un résultat identique.
+
 **Lancer Jenkins en local :**
 ```bash
 cd devops/jenkins

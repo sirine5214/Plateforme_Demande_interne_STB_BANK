@@ -174,13 +174,28 @@ pipeline {
             }
         }
 
+        /*
+         * Les deux images sont baties a partir des artefacts produits plus haut dans ce meme
+         * pipeline (target/*.jar et dist/), via Dockerfile.ci. Reconstruire depuis les sources
+         * dans le conteneur repartait d'un depot Maven et d'un cache npm vides : l'arbre de
+         * dependances etait retelecharge integralement a chaque build, plus de 30 minutes sur
+         * un lien lent, jusqu'a perdre le heartbeat du wrapper Jenkins (JENKINS-48300) et
+         * faire echouer l'etape sur « exit code -1 ». Les Dockerfile multi-etapes restent en
+         * place pour « docker compose up --build » sur un poste de developpement.
+         *
+         * Le timeout borne l'etape : en cas de blocage reseau elle echoue en 15 minutes au
+         * lieu de laisser le build tourner indefiniment.
+         */
         stage('Docker: Build Images') {
+            options {
+                timeout(time: 15, unit: 'MINUTES')
+            }
             steps {
                 dir(BACKEND_DIR) {
-                    sh "docker build -t ${BACKEND_IMAGE}:${IMAGE_TAG} -t ${BACKEND_IMAGE}:latest ."
+                    sh "docker build -f Dockerfile.ci -t ${BACKEND_IMAGE}:${IMAGE_TAG} -t ${BACKEND_IMAGE}:latest ."
                 }
                 dir(FRONTEND_DIR) {
-                    sh "docker build -t ${FRONTEND_IMAGE}:${IMAGE_TAG} -t ${FRONTEND_IMAGE}:latest ."
+                    sh "docker build -f Dockerfile.ci -t ${FRONTEND_IMAGE}:${IMAGE_TAG} -t ${FRONTEND_IMAGE}:latest ."
                 }
             }
         }
